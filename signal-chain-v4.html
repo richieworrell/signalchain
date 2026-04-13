@@ -1613,7 +1613,8 @@ async function saveCustomPedalToCloud(p) {
     showToast('Sign in to save pedals to the library');
     return;
   }
-  const { error } = await sb.from('pedals').upsert({
+  console.log('Saving pedal to Supabase:', p.id, p.brand, p.name);
+  const { data, error, status, statusText } = await sb.from('pedals').upsert({
     pedal_id:   p.id,
     brand:      p.brand,
     name:       p.name,
@@ -1621,10 +1622,11 @@ async function saveCustomPedalToCloud(p) {
     w:          p.w,
     h:          p.h,
     updated_at: new Date().toISOString(),
-  }, { onConflict: 'pedal_id' });
+  }, { onConflict: 'pedal_id' }).select();
+
+  console.log('Pedal save result — status:', status, statusText, '| data:', data, '| error:', error);
 
   if (error) {
-    console.error('Pedal save failed:', error);
     showToast(`Save failed: ${error.message}`);
   } else {
     await loadPedalLibrary();
@@ -1634,13 +1636,14 @@ async function saveCustomPedalToCloud(p) {
 }
 
 async function loadPedalLibrary() {
-  const { data, error } = await sb.from('pedals')
+  console.log('Loading pedal library from Supabase...');
+  const { data, error, status, statusText } = await sb.from('pedals')
     .select('*')
     .order('brand', { ascending: true })
     .order('name',  { ascending: true });
+  console.log('Library fetch — status:', status, statusText, '| rows:', data?.length, '| error:', error);
   if (error) { console.error('Failed to load pedal library:', error); return; }
   pedalLibrary = data || [];
-  console.log(`Pedal library loaded: ${pedalLibrary.length} pedals`);
 }
 
 
