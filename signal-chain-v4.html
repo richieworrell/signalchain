@@ -1496,7 +1496,6 @@ const SUPA_KEY = 'sb_publishable_JiemMcXx0TI06z6NYqRN6w_VnFrXP31';
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 
 let currentUser = null;
-let customPedals = [];
 
 /* ── Auth UI ── */
 function renderAuthArea() {
@@ -1536,8 +1535,9 @@ async function signOut() {
 async function onUserSignedIn(user) {
   currentUser = user;
   renderAuthArea();
-  await loadRigFromCloud(); // rig is per-user; library already loaded at boot
+  await loadRigFromCloud();
   renderSignalChainPedals();
+  renderLibrary();
 }
 
 /* ══════════════════════════════════════════════════════
@@ -1554,7 +1554,6 @@ async function saveRig() {
   ordered.forEach(p => PEDALS.push(p));
 
   if (!currentUser) {
-    // Not signed in — fall back to localStorage
     try {
       localStorage.setItem('sc_rig', JSON.stringify({ pedals: PEDALS, layoutPositions: layoutPedalPositions, connections }));
       showToast('Rig saved locally — sign in to sync across devices');
@@ -1562,21 +1561,26 @@ async function saveRig() {
     return;
   }
 
-  const { error } = await sb.from('rigs').upsert({
+  console.log('Saving rig for user', currentUser.id, '— pedals:', PEDALS.length, 'layout keys:', Object.keys(layoutPedalPositions).length);
+  const { data, error } = await sb.from('rigs').upsert({
     user_id:     currentUser.id,
     pedals:      PEDALS,
     connections: connections,
     layout:      layoutPedalPositions,
     updated_at:  new Date().toISOString(),
-  }, { onConflict: 'user_id' });
+  }, { onConflict: 'user_id' }).select();
 
-  if (error) { console.error(error); showToast('Save failed — ' + error.message); }
-  else showToast('Rig saved ✓');
+  if (error) {
+    console.error('Rig save error:', error);
+    showToast('Save failed — ' + error.message);
+  } else {
+    console.log('Rig saved successfully:', data);
+    showToast('Rig saved ✓');
+  }
 }
 
 async function loadRigFromCloud() {
   if (!currentUser) {
-    // Fall back to localStorage
     try {
       const stored = localStorage.getItem('sc_rig');
       if (!stored) return;
@@ -1584,12 +1588,15 @@ async function loadRigFromCloud() {
       if (Array.isArray(pedals) && pedals.length) { PEDALS.length = 0; pedals.forEach(p => PEDALS.push(p)); }
       if (layoutPositions) layoutPedalPositions = layoutPositions;
       if (savedConnections) connections = savedConnections;
-    } catch(e) {}
+    } catch(e) { console.error('localStorage rig load failed:', e); }
     return;
   }
 
+  console.log('Loading rig for user', currentUser.id);
   const { data, error } = await sb.from('rigs').select('*').eq('user_id', currentUser.id).maybeSingle();
-  if (error || !data) return;
+  if (error) { console.error('Rig load error:', error); return; }
+  if (!data)  { console.log('No saved rig found for this user'); return; }
+  console.log('Rig loaded — pedals:', data.pedals?.length, 'layout keys:', Object.keys(data.layout||{}).length);
   if (Array.isArray(data.pedals) && data.pedals.length) {
     PEDALS.length = 0;
     data.pedals.forEach(p => PEDALS.push(p));
@@ -1606,8 +1613,7 @@ async function saveCustomPedalToCloud(p) {
     showToast('Sign in to save pedals to the library');
     return;
   }
-
-  const { error } = await sb.from('custom_pedals').upsert({
+  const { error } = await sb.from('pedals').upsert({
     pedal_id:   p.id,
     brand:      p.brand,
     name:       p.name,
@@ -1618,29 +1624,24 @@ async function saveCustomPedalToCloud(p) {
   }, { onConflict: 'pedal_id' });
 
   if (error) {
-    console.error('Custom pedal save failed', error);
+    console.error('Pedal save failed:', error);
     showToast(`Save failed: ${error.message}`);
   } else {
+    await loadPedalLibrary();
+    renderLibrary();
     showToast(`"${p.brand} ${p.name}" saved to library`);
-    renderLibrary(LIBRARY);
   }
 }
 
-async function loadCustomPedalsFromCloud() {
-  // Library is universal — load for everyone, signed in or not
-  const { data, error } = await sb.from('custom_pedals').select('*').order('brand');
-  if (error || !data) return;
-  customPedals = data.map(row => ({
-    id:    row.pedal_id,
-    brand: row.brand,
-    name:  row.name,
-    svg:   row.svg,
-    w:     row.w,
-    h:     row.h,
-  }));
+async function loadPedalLibrary() {
+  const { data, error } = await sb.from('pedals')
+    .select('*')
+    .order('brand', { ascending: true })
+    .order('name',  { ascending: true });
+  if (error) { console.error('Failed to load pedal library:', error); return; }
+  pedalLibrary = data || [];
+  console.log(`Pedal library loaded: ${pedalLibrary.length} pedals`);
 }
-
-function getCustomPedals() { return customPedals; }
 
 
 /* Build a pedal DOM element from PEDALS data.
@@ -1910,74 +1911,63 @@ function setupScDrag(el){
 }
 
 /* ═══════════════ PEDAL LIBRARY ═══════════════ */
-const LIBRARY=[
-  {brand:'Boss',name:'DS-1 Distortion',type:'Distortion'},{brand:'Boss',name:'CE-2W Chorus',type:'Modulation'},
-  {brand:'Boss',name:'DD-8 Delay',type:'Delay'},{brand:'Boss',name:'RV-6 Reverb',type:'Reverb'},
-  {brand:'Strymon',name:'Timeline',type:'Delay'},{brand:'Strymon',name:'El Capistan',type:'Delay'},
-  {brand:'Strymon',name:'Mobius',type:'Modulation'},{brand:'Strymon',name:'Flint',type:'Reverb/Trem'},
-  {brand:'EHX',name:'Soul Food',type:'Overdrive'},{brand:'EHX',name:'Big Muff Pi',type:'Fuzz'},
-  {brand:'EHX',name:'POG2',type:'Octave'},{brand:'Keeley',name:'Loomer',type:'Reverb/Fuzz'},
-  {brand:'Keeley',name:'D&M Drive',type:'Overdrive'},{brand:'MXR',name:'Phase 90',type:'Phaser'},
-  {brand:'MXR',name:'Carbon Copy',type:'Delay'},{brand:'MXR',name:'Bass Compressor',type:'Compressor'},
-  {brand:'Wampler',name:'Tumnus',type:'Overdrive'},{brand:'Wampler',name:'Terraform',type:'Modulation'},
-  {brand:'TC Electronic',name:'Flashback 2',type:'Delay'},{brand:'TC Electronic',name:'Hall of Fame 2',type:'Reverb'},
-  {brand:'Walrus Audio',name:'Fathom',type:'Reverb'},{brand:'Walrus Audio',name:'Julia',type:'Chorus'},
-  {brand:'Chase Bliss',name:'Blooper',type:'Looper'},{brand:'Chase Bliss',name:'MOOD',type:'Reverb/Loop'},
-  {brand:'JHS',name:'Morning Glory',type:'Overdrive'},{brand:'Source Audio',name:'C4 Synth',type:'Synth'},
-  {brand:'Earthquaker',name:'Afterneath',type:'Reverb'},{brand:'Earthquaker',name:'Plumes',type:'Overdrive'},
-  {brand:'Meris',name:'Mercury7',type:'Reverb'},{brand:'Meris',name:'Hedra',type:'Pitch'},
-];
-function renderLibrary(items, customsArg){
-  const customs = customsArg !== undefined ? customsArg : getCustomPedals();
+// All pedals — default and custom — live in Supabase. No hardcoded list.
+let pedalLibrary = []; // loaded from Supabase on boot
 
-  // merge standard + custom into one list, sorted by brand then name
-  const all = [
-    ...items.map(p  => ({ ...p,  _custom: false })),
-    ...customs.map(p => ({ ...p, _custom: true, type: p.type || 'Custom' })),
-  ].sort((a, b) => {
-    const bc = a.brand.toLowerCase().localeCompare(b.brand.toLowerCase());
-    return bc !== 0 ? bc : a.name.toLowerCase().localeCompare(b.name.toLowerCase());
-  });
+function renderLibrary(filterStr) {
+  const q   = (filterStr || '').toLowerCase();
+  const all = q
+    ? pedalLibrary.filter(p =>
+        p.name.toLowerCase().includes(q) ||
+        p.brand.toLowerCase().includes(q) ||
+        (p.type||'').toLowerCase().includes(q))
+    : pedalLibrary;
 
-  document.getElementById('libraryGrid').innerHTML = all.map(p => `
-    <div class="library-item">
-      ${p._custom
-        ? `<svg width="36" height="52" viewBox="0 0 ${p.w} ${p.h}" style="display:block;margin:0 auto 8px;">${p.svg}</svg>`
-        : `<div style="width:30px;height:44px;margin:0 auto 10px;background:#2a2a2a;border-radius:3px;border:1px solid #3a3a3a"></div>`}
-      <div class="lib-brand">${p.brand}</div>
-      <div class="lib-name">${p.name}</div>
-      <div class="lib-type">${p.type}</div>
-      <button class="lib-add-btn" onclick="${p._custom ? `addCustomPedal('${p.id}')` : `addPedal('${p.name.replace(/'/g,"\\'")}','${p.brand.replace(/'/g,"\\'")}')` };closePedalModal();">+ Add</button>
-    </div>`).join('');
+  document.getElementById('libraryGrid').innerHTML = all.length
+    ? all.map(p => `
+        <div class="library-item">
+          ${p.svg
+            ? `<svg width="36" height="52" viewBox="0 0 ${p.w||64} ${p.h||90}" style="display:block;margin:0 auto 8px;overflow:visible;">${p.svg}</svg>`
+            : `<div style="width:30px;height:44px;margin:0 auto 10px;background:#2a2a2a;border-radius:3px;border:1px solid #3a3a3a;"></div>`}
+          <div class="lib-brand">${p.brand}</div>
+          <div class="lib-name">${p.name}</div>
+          <div class="lib-type">${p.type || ''}</div>
+          <button class="lib-add-btn" onclick="addLibraryPedal('${p.pedal_id}');closePedalModal();">+ Add</button>
+        </div>`).join('')
+    : `<div style="grid-column:1/-1;text-align:center;color:var(--text-dim);padding:40px;font-family:'Space Mono',monospace;font-size:11px;">No pedals found</div>`;
 }
 
-function filterLibrary(q){
-  const l = q.toLowerCase();
-  renderLibrary(
-    LIBRARY.filter(p => p.name.toLowerCase().includes(l) || p.brand.toLowerCase().includes(l) || p.type.toLowerCase().includes(l)),
-    getCustomPedals().filter(p => p.name.toLowerCase().includes(l) || p.brand.toLowerCase().includes(l))
-  );
-}
-function openPedalModal(){renderLibrary(LIBRARY);document.getElementById('pedalModal').classList.add('open');}
+function filterLibrary(q) { renderLibrary(q); }
+function openPedalModal() { renderLibrary(); document.getElementById('pedalModal').classList.add('open'); }
 
-function removePedal(id){
+function addLibraryPedal(pedalId) {
+  const p = pedalLibrary.find(x => x.pedal_id === pedalId);
+  if (!p) return;
+  const copy = {
+    id:    'p_' + Date.now(),
+    brand: p.brand,
+    name:  p.name,
+    w:     p.w || 64,
+    h:     p.h || 90,
+    svg:   p.svg || `<rect x="2" y="2" width="${(p.w||64)-4}" height="${(p.h||90)-4}" rx="3" fill="#2a2a2a" stroke="#4a4a4a" stroke-width="1.5"/>
+      <text x="${(p.w||64)/2}" y="${(p.h||90)*0.35}" text-anchor="middle" font-family="sans-serif" font-size="7" fill="#888" letter-spacing="1">${p.brand.toUpperCase()}</text>
+      <text x="${(p.w||64)/2}" y="${(p.h||90)*0.46}" text-anchor="middle" font-family="sans-serif" font-size="6" fill="#aaa">${p.name.substring(0,14)}</text>
+      <circle cx="${(p.w||64)/2}" cy="${(p.h||90)*0.65}" r="14" fill="#1a1a1a" stroke="#3a3a3a" stroke-width="1.5"/>
+      <circle cx="${(p.w||64)/2}" cy="${(p.h||90)*0.65}" r="8" fill="#111"/>`,
+  };
+  PEDALS.push(copy);
+  renderSignalChainPedals();
+  syncLayoutPedals();
+  showToast(`${p.brand} ${p.name} added`);
+}
+
+function removePedal(id) {
   const idx = PEDALS.findIndex(p => p.id === id);
   if (idx === -1) return;
   PEDALS.splice(idx, 1);
   delete layoutPedalPositions[id];
   renderSignalChainPedals();
   syncLayoutPedals();
-}
-
-function addCustomPedal(id){
-  const p = customPedals.find(x => x.id === id);
-  if (!p) return;
-  // push a copy onto the board with a unique instance id
-  const copy = { ...p, id: 'p_' + Date.now() };
-  PEDALS.push(copy);
-  renderSignalChainPedals();
-  syncLayoutPedals();
-  showToast(`${p.brand} ${p.name} added`);
 }
 
 function openEditorModal(){ document.getElementById('editorModal').classList.add('open'); }
@@ -1988,14 +1978,7 @@ window.addEventListener('message', e => {
   if (!e.data || e.data.type !== 'sc_save_pedal') return;
   const p = e.data.pedal;
   if (!p || !p.id) return;
-  console.log('sc_save_pedal received', p.brand, p.name, 'user:', currentUser?.id ?? 'NOT SIGNED IN');
-  // library only — do NOT touch PEDALS (the board)
-  let ci = customPedals.findIndex(x => x.id === p.id);
-  if (ci === -1) ci = customPedals.findIndex(x =>
-    x.brand?.toLowerCase().trim() === p.brand?.toLowerCase().trim() &&
-    x.name?.toLowerCase().trim()  === p.name?.toLowerCase().trim()
-  );
-  if (ci !== -1) customPedals[ci] = p; else customPedals.push(p);
+  console.log('sc_save_pedal received:', p.brand, p.name, '| user:', currentUser?.id ?? 'NOT SIGNED IN');
   saveCustomPedalToCloud(p);
 });
 function closePedalModal(){document.getElementById('pedalModal').classList.remove('open');}
@@ -2033,29 +2016,29 @@ renderAuthArea();
 document.body.classList.add('signal-labels-visible');
 setView('layout');
 
-// Boot: always load the shared pedal library first (no auth required)
-// Then check for an existing session and load the user's rig if signed in
+// Boot: load pedal library (no auth needed), then check session for rig
 (async () => {
-  await loadCustomPedalsFromCloud(); // universal library — load for everyone
-  renderLibrary(LIBRARY);
+  await loadPedalLibrary();
+  renderLibrary();
 
   const { data: { session } } = await sb.auth.getSession();
   if (session?.user) {
     await onUserSignedIn(session.user);
   } else {
-    await loadRigFromCloud(); // falls back to localStorage when not signed in
+    await loadRigFromCloud();
     renderSignalChainPedals();
   }
 })();
 
-// Listen for auth state changes (fires after Google OAuth redirect back to the page)
 sb.auth.onAuthStateChange(async (event, session) => {
   if (event === 'SIGNED_IN' && session?.user) {
     await onUserSignedIn(session.user);
   } else if (event === 'SIGNED_OUT') {
     currentUser = null;
+    PEDALS.length = 0;
     renderAuthArea();
-    renderLibrary(LIBRARY); // library stays — it's universal
+    renderSignalChainPedals();
+    renderLibrary();
   }
 });
 </script>
