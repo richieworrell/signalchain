@@ -1515,9 +1515,12 @@ function renderAuthArea() {
 }
 
 async function signIn() {
+  // Use the clean base URL without any query params/hash so it always matches
+  // the redirect URL registered in Supabase and Google Cloud Console
+  const redirectTo = window.location.origin + window.location.pathname;
   await sb.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: window.location.href }
+    options: { redirectTo }
   });
 }
 
@@ -1601,7 +1604,7 @@ async function loadRigFromCloud() {
 ══════════════════════════════════════════════════════ */
 async function saveCustomPedalToCloud(p) {
   if (!currentUser) {
-    // Fall back to localStorage
+    // Not signed in — save to localStorage only
     try {
       const stored  = localStorage.getItem('sc_custom_pedals');
       const customs = stored ? JSON.parse(stored) : [];
@@ -1609,6 +1612,7 @@ async function saveCustomPedalToCloud(p) {
       if (ci !== -1) customs[ci] = p; else customs.push(p);
       localStorage.setItem('sc_custom_pedals', JSON.stringify(customs));
     } catch(e) {}
+    showToast(`"${p.brand} ${p.name}" saved locally — sign in to sync across devices`);
     return;
   }
 
@@ -1623,7 +1627,13 @@ async function saveCustomPedalToCloud(p) {
     updated_at: new Date().toISOString(),
   }, { onConflict: 'user_id,pedal_id' });
 
-  if (error) console.error('Custom pedal save failed', error);
+  if (error) {
+    console.error('Custom pedal save failed', error);
+    showToast(`Save failed: ${error.message}`);
+  } else {
+    showToast(`"${p.brand} ${p.name}" saved to library`);
+    renderLibrary(LIBRARY);
+  }
 }
 
 async function loadCustomPedalsFromCloud() {
@@ -2003,10 +2013,7 @@ window.addEventListener('message', e => {
     x.name?.toLowerCase().trim()  === p.name?.toLowerCase().trim()
   );
   if (ci !== -1) customPedals[ci] = p; else customPedals.push(p);
-  saveCustomPedalToCloud(p).then(() => {
-    renderLibrary(LIBRARY);
-    showToast(`"${p.brand} ${p.name}" saved to library`);
-  });
+  saveCustomPedalToCloud(p);
 });
 function closePedalModal(){document.getElementById('pedalModal').classList.remove('open');}
 document.getElementById('pedalModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closePedalModal();});
