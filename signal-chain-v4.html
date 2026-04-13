@@ -620,7 +620,7 @@ function renderGuitarRow() {
       const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
       svg.setAttribute('viewBox','20 0 160 440');
       svg.setAttribute('height','128');
-      svg.setAttribute('width','auto');
+      svg.style.width = 'auto';
       renderGuitar(svg, g);
       wrap.appendChild(svg);
     },0);
@@ -1625,7 +1625,7 @@ async function saveCustomPedalToCloud(p) {
     w:          p.w,
     h:          p.h,
     updated_at: new Date().toISOString(),
-  }, { onConflict: 'user_id,pedal_id' });
+  }, { onConflict: 'user_id, pedal_id' });
 
   if (error) {
     console.error('Custom pedal save failed', error);
@@ -2005,8 +2005,8 @@ window.addEventListener('message', e => {
   if (!e.data || e.data.type !== 'sc_save_pedal') return;
   const p = e.data.pedal;
   if (!p || !p.id) return;
+  console.log('sc_save_pedal received', p.brand, p.name, 'user:', currentUser?.id ?? 'NOT SIGNED IN');
   // library only — do NOT touch PEDALS (the board)
-  // match by id first, then fall back to brand+name so old-format ids don't create duplicates
   let ci = customPedals.findIndex(x => x.id === p.id);
   if (ci === -1) ci = customPedals.findIndex(x =>
     x.brand?.toLowerCase().trim() === p.brand?.toLowerCase().trim() &&
