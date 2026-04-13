@@ -1589,7 +1589,7 @@ async function loadRigFromCloud() {
     return;
   }
 
-  const { data, error } = await sb.from('rigs').select('*').eq('user_id', currentUser.id).single();
+  const { data, error } = await sb.from('rigs').select('*').eq('user_id', currentUser.id).maybeSingle();
   if (error || !data) return;
   if (Array.isArray(data.pedals) && data.pedals.length) {
     PEDALS.length = 0;
