@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="20.739784"
+   height="20.739784"
+   viewBox="0 0 20.739784 20.739785"
+   version="1.1"
+   id="svg44"
+   sodipodi:docname="DS-1 Distortion.svg"
+   inkscape:version="1.2.2 (732a01da63, 2022-12-09)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs48" />
+  <sodipodi:namedview
+     id="namedview46"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="5.6635103"
+     inkscape:cx="51.028423"
+     inkscape:cy="55.795784"
+     inkscape:window-width="1920"
+     inkscape:window-height="1017"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="g1842" />
+  <g
+     id="g1842"
+     transform="translate(-58.522649,-8.718533)">
+    <circle
+       cx="68.89254"
+       cy="19.088425"
+       r="9.9858217"
+       fill="#171717"
+       stroke="#0d0d0d"
+       stroke-width="0.76814"
+       id="circle24-0-8" />
+    <circle
+       cx="68.89254"
+       cy="19.264994"
+       r="7.6814017"
+       fill="#1a1a1a"
+       stroke="#101010"
+       stroke-width="0.76814"
+       id="circle26-6-9"
+       style="fill:#e6e6e6" />
+    <line
+       x1="62.966072"
+       y1="24.188931"
+       x2="61.369518"
+       y2="25.785486"
+       stroke="#ffffff"
+       stroke-width="0.615783"
+       stroke-linecap="round"
+       id="line30-9-7" />
+  </g>
+</svg>

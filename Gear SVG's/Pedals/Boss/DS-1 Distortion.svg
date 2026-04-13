@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="75.682564"
+   height="123.66759"
+   viewBox="0 0 75.682564 123.66759"
+   version="1.1"
+   id="svg44"
+   sodipodi:docname="DS-1 Distortion.svg"
+   inkscape:version="1.2.2 (732a01da63, 2022-12-09)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs48" />
+  <sodipodi:namedview
+     id="namedview46"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="5.6635103"
+     inkscape:cx="51.028423"
+     inkscape:cy="55.795784"
+     inkscape:window-width="1920"
+     inkscape:window-height="1017"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="g1842" />
+  <g
+     id="g1842"
+     transform="translate(-11.172063,-5.0767751)">
+    <rect
+       x="13.948946"
+       y="5.8267751"
+       width="70"
+       height="120"
+       rx="5"
+       fill="#1a3a5a"
+       stroke="#0e2032"
+       stroke-width="1.5"
+       id="rect2"
+       ry="5"
+       style="fill:#ff6600" />
+    <rect
+       x="14.125515"
+       y="5.8267751"
+       width="70"
+       height="38"
+       rx="5"
+       fill="#15304a"
+       stroke="#0e2032"
+       stroke-width="0"
+       id="rect4"
+       ry="5"
+       style="fill:#ff5900;fill-opacity:1" />
+    <line
+       x1="14.125515"
+       y1="43.826775"
+       x2="84.125519"
+       y2="43.826775"
+       stroke="#0e2032"
+       stroke-width="0.8"
+       id="line6" />
+    <rect
+       x="19.625515"
+       y="79.826775"
+       width="59"
+       height="40"
+       rx="0"
+       fill="#1a1a1a"
+       stroke="#121212"
+       stroke-width="1"
+       id="rect10" />
+    <rect
+       x="21.625515"
+       y="81.826775"
+       width="55"
+       height="36"
+       rx="0"
+       fill="#353535"
+       opacity="0.12"
+       id="rect12" />
+    <ellipse
+       cx="49.125515"
+       cy="98.826775"
+       rx="16.52"
+       ry="8.8000002"
+       fill="#353535"
+       opacity="0.1"
+       id="ellipse14" />
+    <circle
+       cx="49.125515"
+       cy="32.615307"
+       r="7.1556082"
+       fill="#171717"
+       stroke="#0d0d0d"
+       stroke-width="0.550431"
+       id="circle24" />
+    <circle
+       cx="49.125515"
+       cy="32.615307"
+       r="5.5043144"
+       fill="#1a1a1a"
+       stroke="#101010"
+       stroke-width="0.550431"
+       id="circle26"
+       style="fill:#ececec" />
+    <line
+       x1="44.878746"
+       y1="36.27021"
+       x2="43.734692"
+       y2="37.414265"
+       stroke="#ffffff"
+       stroke-width="0.441256"
+       stroke-linecap="round"
+       id="line30" />
+    <circle
+       cx="29.82444"
+       cy="19.088425"
+       r="9.9858217"
+       fill="#171717"
+       stroke="#0d0d0d"
+       stroke-width="0.76814"
+       id="circle24-0" />
+    <circle
+       cx="29.82444"
+       cy="19.088425"
+       r="7.6814017"
+       fill="#1a1a1a"
+       stroke="#101010"
+       stroke-width="0.76814"
+       id="circle26-6"
+       style="fill:#ececec" />
+    <line
+       x1="23.897974"
+       y1="24.188931"
+       x2="22.301416"
+       y2="25.785486"
+       stroke="#ffffff"
+       stroke-width="0.615783"
+       stroke-linecap="round"
+       id="line30-9" />
+    <circle
+       cx="68.89254"
+       cy="19.088425"
+       r="9.9858217"
+       fill="#171717"
+       stroke="#0d0d0d"
+       stroke-width="0.76814"
+       id="circle24-0-8" />
+    <circle
+       cx="68.89254"
+       cy="19.088425"
+       r="7.6814017"
+       fill="#1a1a1a"
+       stroke="#101010"
+       stroke-width="0.76814"
+       id="circle26-6-9"
+       style="fill:#e6e6e6" />
+    <line
+       x1="62.966072"
+       y1="24.188931"
+       x2="61.369518"
+       y2="25.785486"
+       stroke="#ffffff"
+       stroke-width="0.615783"
+       stroke-linecap="round"
+       id="line30-9-7" />
+    <circle
+       cx="49.125515"
+       cy="10.826775"
+       r="2"
+       fill="#ff4444"
+       opacity="0.9"
+       id="circle40" />
+    <circle
+       cx="49.125515"
+       cy="10.826775"
+       r="1.1"
+       fill="#ff8585"
+       opacity="0.7"
+       id="circle42" />
+    <rect
+       style="fill:#000000"
+       id="rect577"
+       width="6.5512443"
+       height="2.2007496"
+       x="45.849895"
+       y="126.54362"
+       rx="3.2132537"
+       ry="0.04011007" />
+    <rect
+       style="fill:#000000;stroke-width:0.754167"
+       id="rect577-1"
+       width="3.7261412"
+       height="2.2007496"
+       x="46.516815"
+       y="11.965729"
+       rx="3.2132537"
+       ry="0.04011007"
+       transform="matrix(0,1,1,0,0,0)" />
+    <rect
+       style="fill:#b3b3b3;stroke-width:1.40367"
+       id="rect577-1-6"
+       width="12.907726"
+       height="2.2007496"
+       x="53.578857"
+       y="11.172063"
+       rx="3.213254"
+       ry="0.04011007"
+       transform="matrix(0,1,1,0,0,0)" />
+    <rect
+       style="fill:#b3b3b3;stroke-width:1.40367"
+       id="rect577-1-6-8"
+       width="12.907726"
+       height="2.2007496"
+       x="53.578857"
+       y="84.653877"
+       rx="3.213254"
+       ry="0.04011007"
+       transform="matrix(0,1,1,0,0,0)" />
+    <rect
+       style="fill:#000000;stroke-width:0.754167"
+       id="rect577-1-1"
+       width="3.7261412"
+       height="2.2007496"
+       x="46.516815"
+       y="84.182426"
+       rx="3.2132537"
+       ry="0.04011007"
+       transform="matrix(0,1,1,0,0,0)" />
+    <text
+       xml:space="preserve"
+       style="font-size:11.5923px;font-family:'18thCentury';-inkscape-font-specification:'18thCentury';letter-spacing:-1.08677px;fill:#b3b3b3;stroke-width:0.217355"
+       x="18.96768"
+       y="67.187698"
+       id="text872-8"><tspan
+         sodipodi:role="line"
+         id="tspan870-5"
+         x="18.96768"
+         y="67.187698"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:monospace;-inkscape-font-specification:'monospace Bold';fill:#000000;stroke-width:0.217355">Distortion</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:7.95041px;font-family:'18thCentury';-inkscape-font-specification:'18thCentury';letter-spacing:-0.745344px;fill:#100600;fill-opacity:1;stroke-width:0.14907"
+       x="79.142967"
+       y="74.642654"
+       id="text872-8-2"><tspan
+         sodipodi:role="line"
+         id="tspan870-5-3"
+         x="78.397621"
+         y="74.642654"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:monospace;-inkscape-font-specification:'monospace Bold';text-align:end;text-anchor:end;fill:#100600;fill-opacity:1;stroke-width:0.14907">DS-1</tspan></text>
+    <rect
+       style="fill:#100600;fill-opacity:0.22561;stroke-width:0.469403"
+       id="rect3613"
+       width="69.921303"
+       height="2.2953961"
+       x="13.997166"
+       y="41.626545"
+       rx="0"
+       ry="0" />
+  </g>
+</svg>

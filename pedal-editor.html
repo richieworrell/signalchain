@@ -1,0 +1,1565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Signal Chain — Pedal Editor</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0e0d0b; --surface:#181613; --surface2:#201d19; --border:#2e2a24;
+  --amber:#d4832a; --amber-light:#f0a84a; --cream:#e8dcc8; --cream-dim:#9a8e7a;
+  --text:#e2d6c2; --text-dim:#7a6e5e; --panel:#111009;
+  --silver:#c0c4c8;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+
+/* NAV */
+nav{display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:52px;border-bottom:1px solid var(--border);background:var(--panel);flex-shrink:0;z-index:10;}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:4px;color:var(--amber);}
+.logo span{color:var(--cream-dim);font-size:14px;letter-spacing:2px;margin-left:12px;}
+.nav-right{display:flex;gap:10px;align-items:center;}
+.btn{padding:7px 16px;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;border-radius:2px;transition:all .15s;}
+.btn-ghost{background:none;border:1px solid var(--border);color:var(--text-dim);}
+.btn-ghost:hover{border-color:var(--cream-dim);color:var(--cream);}
+.btn-amber{background:var(--amber);border:none;color:var(--bg);font-weight:700;}
+.btn-amber:hover{background:var(--amber-light);}
+.btn-outline-amber{background:none;border:1px solid var(--amber);color:var(--amber);}
+.btn-outline-amber:hover{background:var(--amber);color:var(--bg);}
+
+/* LAYOUT */
+.workspace{display:grid;grid-template-columns:260px 1fr 300px;flex:1;overflow:hidden;}
+
+/* LEFT PANEL */
+.left-panel{border-right:1px solid var(--border);background:var(--panel);overflow-y:auto;display:flex;flex-direction:column;}
+.panel-section{padding:14px 16px;border-bottom:1px solid var(--border);}
+.panel-title{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--text-dim);margin-bottom:10px;}
+
+/* Enclosure grid */
+.enclosure-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.enc-btn{background:var(--surface);border:1px solid var(--border);padding:8px 6px;cursor:pointer;transition:all .15s;text-align:center;border-radius:2px;}
+.enc-btn:hover{border-color:var(--cream-dim);}
+.enc-btn.active{border-color:var(--amber);background:var(--surface2);}
+.enc-btn svg{display:block;margin:0 auto 5px;}
+.enc-label{font-family:'Space Mono',monospace;font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);}
+.enc-btn.active .enc-label{color:var(--amber);}
+
+/* Color */
+.color-row{display:flex;flex-wrap:wrap;gap:5px;}
+.cswatch{width:22px;height:22px;border-radius:2px;cursor:pointer;border:2px solid transparent;transition:all .12s;}
+.cswatch:hover{transform:scale(1.12);}
+.cswatch.sel{border-color:var(--cream);}
+.custom-color-wrap{display:flex;align-items:center;gap:8px;margin-top:8px;}
+.custom-color-wrap label{font-family:'Space Mono',monospace;font-size:9px;color:var(--text-dim);letter-spacing:1px;}
+input[type=color]{width:32px;height:24px;border:1px solid var(--border);background:none;cursor:pointer;padding:0;}
+
+/* Add elements */
+.add-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.add-btn{background:var(--surface);border:1px solid var(--border);padding:8px;cursor:pointer;transition:all .15s;text-align:center;border-radius:2px;font-family:'Space Mono',monospace;font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);}
+.add-btn:hover{border-color:var(--amber);color:var(--amber);}
+
+/* Element list */
+.el-list{display:flex;flex-direction:column;gap:4px;}
+.el-item{display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--surface);border:1px solid var(--border);border-radius:2px;cursor:pointer;transition:all .12s;}
+.el-item:hover,.el-item.active{border-color:var(--amber);}
+.el-item.active{background:var(--surface2);}
+.el-item-label{font-family:'Space Mono',monospace;font-size:9px;color:var(--cream-dim);flex:1;letter-spacing:.5px;}
+.el-item-del{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:14px;line-height:1;padding:0 2px;transition:color .12s;}
+.el-item-del:hover{color:#e05050;}
+.el-drag-handle{color:var(--text-dim);font-size:12px;cursor:grab;}
+
+/* CENTER — canvas */
+.canvas-area{background:#1a1816;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;position:relative;overflow:hidden;}
+.canvas-bg{position:absolute;inset:0;background-image:radial-gradient(circle,#2a2620 1px,transparent 1px);background-size:20px 20px;opacity:.5;}
+#pedalCanvas{position:relative;z-index:2;cursor:default;filter:drop-shadow(0 16px 48px rgba(0,0,0,.9));}
+#pedalCanvas svg{display:block;}
+.canvas-hint{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:1.5px;color:var(--text-dim);text-transform:uppercase;position:absolute;bottom:20px;left:50%;transform:translateX(-50%);z-index:2;}
+
+/* RIGHT PANEL — inspector */
+.right-panel{border-left:1px solid var(--border);background:var(--panel);overflow-y:auto;}
+.inspector-section{padding:14px 16px;border-bottom:1px solid var(--border);}
+.insp-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.insp-label{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);}
+.insp-val{font-family:'Space Mono',monospace;font-size:11px;color:var(--cream);}
+.insp-input{background:var(--bg);border:1px solid var(--border);color:var(--cream);padding:5px 8px;font-family:'Space Mono',monospace;font-size:11px;width:80px;outline:none;text-align:right;}
+.insp-input:focus{border-color:var(--amber);}
+/* hide native number spinners — step still works via keyboard */
+.insp-input[type=number]::-webkit-inner-spin-button,
+.insp-input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
+.insp-input[type=number]{-moz-appearance:textfield;appearance:textfield;}
+.insp-input-full{width:100%;text-align:left;margin-top:4px;padding:7px 10px;}
+.insp-select{background:var(--bg);border:1px solid var(--border);color:var(--cream);padding:5px 8px;font-family:'Space Mono',monospace;font-size:10px;outline:none;width:100%;margin-top:4px;}
+.insp-select:focus{border-color:var(--amber);}
+.insp-color{width:32px;height:26px;border:1px solid var(--border);background:none;cursor:pointer;padding:0;}
+
+/* output */
+.output-box{background:var(--bg);border:1px solid var(--border);padding:12px;font-family:'Space Mono',monospace;font-size:9px;color:#6a9a6a;line-height:1.6;max-height:180px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;margin-top:8px;}
+
+/* scrollbar */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border);}
+::-webkit-scrollbar-thumb:hover{background:var(--amber);}
+
+/* selected element highlight ring */
+.sel-ring{position:absolute;pointer-events:none;border:1.5px dashed var(--amber);border-radius:2px;z-index:20;}
+</style>
+</head>
+<body>
+
+<nav>
+  <div style="display:flex;align-items:center;gap:0;">
+    <div class="logo">SIGNAL CHAIN <span>/ Pedal Editor</span></div>
+  </div>
+  <div class="nav-right">
+    <button class="btn btn-ghost" id="undoBtn" onclick="undo()" disabled style="opacity:0.35;">Undo</button>
+    <button class="btn btn-ghost" onclick="resetEditor()">New Pedal</button>
+    <button class="btn btn-ghost" onclick="loadPreset()">Load Preset</button>
+    <button class="btn btn-ghost" onclick="downloadSVG()">↓ SVG</button>
+    <label class="btn btn-ghost" style="cursor:pointer;" title="Upload an SVG to use as the full pedal design">↑ SVG<input type="file" accept=".svg,image/svg+xml" style="display:none" onchange="uploadPedalSVG(this)"/></label>
+    <button class="btn btn-outline-amber" onclick="copyOutput()">Copy SVG</button>
+    <button class="btn btn-ghost" onclick="copyPedalEntry()">Copy Entry</button>
+    <button class="btn btn-amber" onclick="saveToLibrary()">Save to Library</button>
+  </div>
+</nav>
+
+<div class="workspace">
+
+  <!-- LEFT PANEL -->
+  <div class="left-panel">
+
+    <!-- Enclosure -->
+    <div class="panel-section">
+      <div class="panel-title">Enclosure</div>
+      <div class="enclosure-grid" id="enclosureGrid"></div>
+    </div>
+
+    <!-- Custom Enclosure Size -->
+    <div class="panel-section">
+      <div class="panel-title">Custom Enclosure</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;">
+        <div>
+          <div style="font-family:'Space Mono',monospace;font-size:8px;color:var(--text-dim);margin-bottom:3px;letter-spacing:1px;">W (in)</div>
+          <input type="number" id="customEncW" step="0.1" min="1" max="12" value="2.36"
+            style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--cream);padding:5px 6px;font-family:'Space Mono',monospace;font-size:10px;outline:none;"
+            onfocus="this.style.borderColor='var(--amber)'" onblur="this.style.borderColor='var(--border)'"/>
+        </div>
+        <div>
+          <div style="font-family:'Space Mono',monospace;font-size:8px;color:var(--text-dim);margin-bottom:3px;letter-spacing:1px;">D (in)</div>
+          <input type="number" id="customEncD" step="0.1" min="1" max="12" value="4.75"
+            style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--cream);padding:5px 6px;font-family:'Space Mono',monospace;font-size:10px;outline:none;"
+            onfocus="this.style.borderColor='var(--amber)'" onblur="this.style.borderColor='var(--border)'"/>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px;">
+        <div style="font-family:'Space Mono',monospace;font-size:8px;color:var(--text-dim);letter-spacing:1px;">Boss style</div>
+        <input type="checkbox" id="customEncBoss" style="accent-color:var(--amber);"/>
+      </div>
+      <button class="add-btn" style="width:100%;padding:8px;" onclick="generateCustomEnclosure()">Generate Enclosure</button>
+    </div>
+
+    <!-- Color -->
+    <div class="panel-section">
+      <div class="panel-title">Body Color</div>
+      <div class="color-row" id="colorRow"></div>
+      <div class="custom-color-wrap">
+        <label>Custom</label>
+        <input type="color" id="customColor" value="#2a5a8a" oninput="setCustomColor(this.value)"/>
+        <input type="text" id="hexDisplay" value="#2a5a8a" maxlength="7"
+          style="font-family:'Space Mono',monospace;font-size:9px;color:var(--cream-dim);background:var(--bg);border:1px solid var(--border);padding:2px 5px;width:64px;outline:none;"
+          oninput="onHexInput(this.value)"
+          onfocus="this.style.borderColor='var(--amber)'"
+          onblur="this.style.borderColor='var(--border)'"/>
+      </div>
+    </div>
+
+    <!-- Add Elements -->
+    <div class="panel-section">
+      <div class="panel-title">Add Element</div>
+      <div class="add-grid">
+        <button class="add-btn" onclick="addElement('knob_davies')">+ Knob<br><span style="font-size:7px;opacity:.6;">Davies</span></button>
+        <button class="add-btn" onclick="addElement('knob_chickenhead')">+ Knob<br><span style="font-size:7px;opacity:.6;">Chicken Head</span></button>
+        <button class="add-btn" onclick="addElement('knob_tophat')">+ Knob<br><span style="font-size:7px;opacity:.6;">Top Hat</span></button>
+        <button class="add-btn" onclick="addElement('knob_mini')">+ Knob<br><span style="font-size:7px;opacity:.6;">Mini</span></button>
+        <button class="add-btn" onclick="addElement('switch_3pdt')">+ Switch<br><span style="font-size:7px;opacity:.6;">Stomp 3PDT</span></button>
+        <button class="add-btn" onclick="addElement('switch_soft')">+ Switch<br><span style="font-size:7px;opacity:.6;">Soft Touch</span></button>
+        <button class="add-btn" onclick="addElement('switch_boss')">+ Switch<br><span style="font-size:7px;opacity:.6;">Boss Rubber</span></button>
+        <button class="add-btn" onclick="addElement('switch_boss_waza')">+ Switch<br><span style="font-size:7px;opacity:.6;">Boss WAZA</span></button>
+        <button class="add-btn" onclick="addElement('toggle_mini')">+ Toggle<br><span style="font-size:7px;opacity:.6;">Mini SPDT</span></button>
+        <button class="add-btn" onclick="addElement('led')">+ LED</button>
+        <button class="add-btn" onclick="addElement('screen')">+ Screen<br><span style="font-size:7px;opacity:.6;">OLED/LCD</span></button>
+        <button class="add-btn" onclick="addElement('label_brand')">+ Label<br><span style="font-size:7px;opacity:.6;">Brand/Title</span></button>
+        <button class="add-btn" onclick="addElement('label_knob')">+ Label<br><span style="font-size:7px;opacity:.6;">Knob Name</span></button>
+        <button class="add-btn" onclick="addElement('jack')">+ Jack<br><span style="font-size:7px;opacity:.6;">Input/Output</span></button>
+        <label class="add-btn" style="cursor:pointer;">+ Custom<br><span style="font-size:7px;opacity:.6;">Upload SVG</span><input type="file" accept=".svg,image/svg+xml" style="display:none" onchange="addCustomSVGElement(this)"/></label>
+      </div>
+    </div>
+
+    <!-- Element list -->
+    <div class="panel-section" style="flex:1;">
+      <div class="panel-title">Elements</div>
+      <div class="el-list" id="elList"></div>
+    </div>
+
+  </div>
+
+  <!-- CENTER CANVAS -->
+  <div class="canvas-area">
+    <div class="canvas-bg"></div>
+    <div id="pedalCanvas"></div>
+    <div class="canvas-hint" id="canvasHint">Click to select · Drag to move · Delete to remove · Arrow keys to nudge · Shift+Arrow = 10px</div>
+  </div>
+
+  <!-- RIGHT INSPECTOR -->
+  <div class="right-panel" id="rightPanel">
+    <div class="inspector-section">
+      <div class="panel-title">Pedal Info</div>
+      <div class="insp-row">
+        <span class="insp-label">Brand</span>
+      </div>
+      <input class="insp-input insp-input-full" id="infoBrand" placeholder="e.g. Strymon" oninput="updatePedalInfo()"/>
+      <div class="insp-row" style="margin-top:8px;"><span class="insp-label">Model</span></div>
+      <input class="insp-input insp-input-full" id="infoModel" placeholder="e.g. BigSky" oninput="updatePedalInfo()"/>
+      <div class="insp-row" style="margin-top:10px;"><span class="insp-label" style="color:var(--amber);">Canvas Size (SVG px)</span></div>
+      <div class="insp-row" style="margin-top:4px;"><span class="insp-label">Width</span>
+        <input class="insp-input" id="encW" type="number" step="1" min="40" max="300" value="70" oninput="updateEnclosureSize()"/>
+      </div>
+      <div class="insp-row"><span class="insp-label">Height</span>
+        <input class="insp-input" id="encH" type="number" step="1" min="40" max="300" value="120" oninput="updateEnclosureSize()"/>
+      </div>
+      <div class="insp-row" style="margin-top:10px;"><span class="insp-label" style="color:var(--amber);">Real-world Size (in)</span></div>
+      <div class="insp-row" style="margin-top:4px;"><span class="insp-label">Width</span>
+        <input class="insp-input" id="infoWidthIn" type="number" step="0.01" value="2.36" oninput="updatePedalInfo()"/>
+      </div>
+      <div class="insp-row"><span class="insp-label">Depth</span>
+        <input class="insp-input" id="infoDepthIn" type="number" step="0.01" value="4.75" oninput="updatePedalInfo()"/>
+      </div>
+    </div>
+
+    <div class="inspector-section" id="elementInspector" style="display:none;">
+      <div class="panel-title" id="inspTitle">Element</div>
+      <div id="inspBody"></div>
+    </div>
+
+    <div class="inspector-section">
+      <div class="panel-title">SVG Output</div>
+      <div style="display:flex;gap:6px;margin-bottom:6px;">
+        <button class="btn btn-ghost" style="flex:1;font-size:9px;" onclick="copyOutput()">Copy SVG</button>
+        <button class="btn btn-amber" style="flex:1;font-size:9px;" onclick="copyPedalEntry()">Copy Entry</button>
+      </div>
+      <div class="output-box" id="outputBox">← Build your pedal to generate output</div>
+    </div>
+
+    <div class="inspector-section">
+      <div class="panel-title">How to Import</div>
+      <div style="font-family:'Space Mono',monospace;font-size:8px;color:var(--text-dim);line-height:1.8;">
+        1. Click <span style="color:var(--amber);">Copy PEDALS Entry</span><br>
+        2. Open <span style="color:var(--cream-dim);">signal-chain-v4.html</span><br>
+        3. Find the <span style="color:var(--cream-dim);">const PEDALS = [</span> array<br>
+        4. Paste your entry inside the array<br>
+        5. Add <span style="color:var(--cream-dim);">widthIn</span> and <span style="color:var(--cream-dim);">depthIn</span><br>&nbsp;&nbsp;&nbsp;fields for layout scaling<br><br>
+        <span style="color:var(--text-dim);opacity:.7;">The svg field contains everything<br>between the outer &lt;svg&gt; tags.<br>Width/height are set automatically.</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ═══════════════════════════════════════════
+   ENCLOSURE DEFINITIONS
+   w/h in SVG units. Real-world sizes in inches
+   for reference (used in PEDALS entry export).
+═══════════════════════════════════════════ */
+const ENCLOSURES = [
+  {
+    id: 'boss_compact',
+    label: 'Boss Compact',
+    w: 70, h: 120,
+    widthIn: 2.36, depthIn: 4.75,
+    // path describes the face shape (slightly angled top panel is signature Boss look)
+    bodyPath: null, // rectangle — use w/h
+    topPanelH: 38, // angled top panel height
+    desc: 'Classic Boss compact. Angled top panel, single stomp.',
+  },
+  {
+    id: 'mxr_standard',
+    label: 'MXR Standard',
+    w: 70, h: 112,
+    widthIn: 2.38, depthIn: 4.5,
+    topPanelH: 0,
+    desc: 'MXR standard enclosure. Clean rectangle.',
+  },
+  {
+    id: 'jhs_compact',
+    label: 'JHS Compact',
+    w: 66, h: 112,
+    widthIn: 2.2, depthIn: 4.4,
+    topPanelH: 0,
+    desc: 'JHS-style compact. Slightly narrower than Boss.',
+  },
+  {
+    id: 'strymon_large',
+    label: 'Strymon Large',
+    w: 112, h: 104,
+    widthIn: 4.5, depthIn: 4.13,
+    topPanelH: 0,
+    desc: 'BigSky, Timeline, Mobius. Wide landscape box.',
+  },
+  {
+    id: 'strymon_small',
+    label: 'Strymon Small',
+    w: 80, h: 104,
+    widthIn: 3.13, depthIn: 4.13,
+    topPanelH: 0,
+    desc: 'Flint, El Capistan, DIG. Two footswitches.',
+  },
+  {
+    id: 'walrus_medium',
+    label: 'Walrus Med.',
+    w: 96, h: 104,
+    widthIn: 3.75, depthIn: 4.13,
+    topPanelH: 0,
+    desc: 'Walrus Audio medium landscape enclosure.',
+  },
+  {
+    id: '1590b',
+    label: '1590B / Boutique',
+    w: 64, h: 108,
+    widthIn: 2.3, depthIn: 4.4,
+    topPanelH: 0,
+    desc: 'Hammond 1590B — standard boutique pedal enclosure.',
+  },
+  {
+    id: 'ehx_nano',
+    label: 'EHX Nano',
+    w: 60, h: 96,
+    widthIn: 2.25, depthIn: 3.75,
+    topPanelH: 0,
+    desc: 'EHX Nano series. Compact rectangle.',
+  },
+];
+
+const BODY_COLORS = [
+  {c:'#111111',n:'Black'},
+  {c:'#f0ede6',n:'White'},
+  {c:'#c8a030',n:'Gold'},
+  {c:'#8b1a1a',n:'Red'},
+  {c:'#c44020',n:'Orange Red'},
+  {c:'#e07020',n:'Orange'},
+  {c:'#1a6e3a',n:'Green'},
+  {c:'#2d6a2d',n:'Surf Green'},
+  {c:'#1a3a5a',n:'Navy'},
+  {c:'#2a5a8a',n:'Blue'},
+  {c:'#4a90c8',n:'Sky Blue'},
+  {c:'#6a1a8b',n:'Purple'},
+  {c:'#5a3020',n:'Brown'},
+  {c:'#808080',n:'Grey'},
+  {c:'#b8b8b8',n:'Silver'},
+  {c:'#d4a060',n:'Tan'},
+];
+
+/* ═══════════════════════════════════════════
+   EDITOR STATE
+═══════════════════════════════════════════ */
+let state = {
+  enclosure: ENCLOSURES[0],
+  bodyColor: '#1a3a5a',
+  elements: [],
+  selectedId: null,
+  enclosureSelected: false,
+  brand: 'Strymon',
+  model: 'BigSky',
+  widthIn: 4.5,
+  depthIn: 4.13,
+  staticSVG: null, // when set, the canvas shows this raw SVG instead of body+elements
+};
+
+let nextId = 1;
+let dragState = null; // {id, startX, startY, origX, origY}
+let clipboard = null; // copy/paste
+let undoStack = [];
+const UNDO_LIMIT = 50;
+
+function pushUndo() {
+  undoStack.push({
+    elements: JSON.parse(JSON.stringify(state.elements)),
+    bodyColor: state.bodyColor,
+    enclosure: { ...state.enclosure },
+    brand: state.brand,
+    model: state.model,
+    widthIn: state.widthIn,
+    depthIn: state.depthIn,
+    staticSVG: state.staticSVG,
+  });
+  if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+  updateUndoBtn();
+}
+
+function undo() {
+  if (!undoStack.length) return;
+  const snap = undoStack.pop();
+  state.elements  = snap.elements;
+  state.bodyColor = snap.bodyColor;
+  state.enclosure = snap.enclosure;
+  state.brand     = snap.brand;
+  state.model     = snap.model;
+  state.widthIn   = snap.widthIn;
+  state.depthIn   = snap.depthIn;
+  state.staticSVG = snap.staticSVG;
+  state.selectedId = null;
+  state.enclosureSelected = false;
+  // sync UI inputs
+  document.getElementById('infoBrand').value   = state.brand;
+  document.getElementById('infoModel').value    = state.model;
+  document.getElementById('infoWidthIn').value  = state.widthIn;
+  document.getElementById('infoDepthIn').value  = state.depthIn;
+  document.getElementById('encW').value         = state.enclosure.w;
+  document.getElementById('encH').value         = state.enclosure.h;
+  document.getElementById('customColor').value  = state.bodyColor;
+  document.getElementById('hexDisplay').value   = state.bodyColor;
+  buildColorRow();
+  buildEnclosureGrid();
+  renderElList();
+  redraw();
+  hideInspector();
+  updateUndoBtn();
+}
+
+function updateUndoBtn() {
+  const btn = document.getElementById('undoBtn');
+  if (!btn) return;
+  btn.disabled = undoStack.length === 0;
+  btn.style.opacity = undoStack.length === 0 ? '0.35' : '1';
+}
+
+/* ═══════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════ */
+function init() {
+  buildEnclosureGrid();
+  buildColorRow();
+  document.getElementById('infoBrand').value = state.brand;
+  document.getElementById('infoModel').value  = state.model;
+  document.getElementById('infoWidthIn').value = state.widthIn;
+  document.getElementById('infoDepthIn').value = state.depthIn;
+  document.getElementById('encW').value = state.enclosure.w;
+  document.getElementById('encH').value = state.enclosure.h;
+  // select first enclosure
+  selectEnclosure(ENCLOSURES[0]);
+  redraw();
+}
+
+function buildEnclosureGrid() {
+  const grid = document.getElementById('enclosureGrid');
+  const encs = state.enclosure.id === 'custom'
+    ? [...ENCLOSURES, state.enclosure]
+    : ENCLOSURES;
+  grid.innerHTML = encs.map(e => `
+    <div class="enc-btn ${e.id===state.enclosure.id?'active':''}"
+      onclick="${e.id==='custom'?'':(`selectEnclosure(ENCLOSURES.find(x=>x.id===\'${e.id}\'))`)}"
+      style="${e.id==='custom'?'border-color:var(--amber);cursor:default;':''}"
+      title="${e.desc||e.label}">
+      ${miniEncSVG(e)}
+      <div class="enc-label">${e.label}</div>
+    </div>
+  `).join('');
+}
+
+function miniEncSVG(e) {
+  const scale = Math.min(40/e.w, 32/e.h);
+  const sw = Math.round(e.w*scale), sh = Math.round(e.h*scale);
+  return `<svg width="${sw}" height="${sh}" viewBox="0 0 ${e.w} ${e.h}">
+    <rect x="1" y="1" width="${e.w-2}" height="${e.h-2}" rx="3" fill="#2a2a2a" stroke="#555" stroke-width="1"/>
+    ${e.topPanelH ? `<rect x="1" y="1" width="${e.w-2}" height="${e.topPanelH}" rx="3" fill="#222" stroke="#555" stroke-width="1"/>` : ''}
+  </svg>`;
+}
+
+function buildColorRow() {
+  const row = document.getElementById('colorRow');
+  row.innerHTML = BODY_COLORS.map(({c,n}) =>
+    `<div class="cswatch ${c===state.bodyColor?'sel':''}" style="background:${c}" title="${n}" onclick="setBodyColor('${c}')"></div>`
+  ).join('');
+}
+
+/* ═══════════════════════════════════════════
+   ENCLOSURE SELECTION
+═══════════════════════════════════════════ */
+function selectEnclosure(enc) {
+  pushUndo();
+  state.enclosure = enc;
+  state.widthIn = enc.widthIn;
+  state.depthIn = enc.depthIn;
+  document.getElementById('infoWidthIn').value = enc.widthIn;
+  document.getElementById('infoDepthIn').value = enc.depthIn;
+  document.getElementById('encW').value = enc.w;
+  document.getElementById('encH').value = enc.h;
+  buildEnclosureGrid();
+  // add default jacks for the enclosure if no elements yet
+  if (state.elements.length === 0) addDefaultElements(enc);
+  redraw();
+}
+
+/* Live-edit the enclosure canvas dimensions without switching preset */
+function updateEnclosureSize() {
+  pushUndo();
+  const w = parseInt(document.getElementById('encW').value) || state.enclosure.w;
+  const h = parseInt(document.getElementById('encH').value) || state.enclosure.h;
+  // mutate a copy so we don't stomp the preset definition
+  state.enclosure = { ...state.enclosure, w, h };
+  redraw();
+}
+
+function addDefaultElements(enc) {
+  state.elements = [];
+  const cx = enc.w / 2;
+  // bottom jacks
+  addEl({type:'jack', x: 8,       y: enc.h - 10, label:'', color:'#b3b3b3', rotation:0});
+  addEl({type:'jack', x: enc.w-8, y: enc.h - 10, label:'', color:'#b3b3b3', rotation:0});
+  // stomp switch(es)
+  if (enc.id === 'strymon_large' || enc.id === 'strymon_small' || enc.id === 'walrus_medium') {
+    addEl({type:'switch_soft', x: cx-20, y: enc.h-28, label:''});
+    addEl({type:'switch_soft', x: cx+20, y: enc.h-28, label:''});
+  } else if (enc.id === 'boss_compact') {
+    addEl({type:'switch_boss', x: cx, y: enc.h - 26, w: 36, h: 22, color:'#1a1a1a', label:''});
+  } else {
+    addEl({type:'switch_3pdt', x: cx, y: enc.h - 26, label:''});
+  }
+  renderElList();
+}
+
+/* ═══════════════════════════════════════════
+   COLOR
+═══════════════════════════════════════════ */
+function setBodyColor(c) {
+  pushUndo();
+  state.bodyColor = c;
+  document.getElementById('customColor').value = c;
+  document.getElementById('hexDisplay').value = c;
+  buildColorRow();
+  redraw();
+}
+function setCustomColor(c) {
+  pushUndo();
+  state.bodyColor = c;
+  document.getElementById('hexDisplay').value = c;
+  buildColorRow();
+  redraw();
+}
+function onHexInput(val) {
+  // Accept full 6-digit hex as user types
+  const v = val.startsWith('#') ? val : '#'+val;
+  if (/^#[0-9a-fA-F]{6}$/.test(v)) {
+    state.bodyColor = v;
+    document.getElementById('customColor').value = v;
+    buildColorRow();
+    redraw();
+  }
+}
+
+/* ── Generate a custom enclosure from inch dimensions ── */
+function generateCustomEnclosure() {
+  const wIn = parseFloat(document.getElementById('customEncW').value) || 2.36;
+  const dIn = parseFloat(document.getElementById('customEncD').value) || 4.75;
+  const isBoss = document.getElementById('customEncBoss').checked;
+  // 27px per inch gives a good resolution for the pedal SVG canvas
+  const PX_PER_IN = 27;
+  const w = Math.round(wIn * PX_PER_IN);
+  const h = Math.round(dIn * PX_PER_IN);
+  pushUndo();
+  state.enclosure = {
+    id: 'custom',
+    label: 'Custom',
+    w, h,
+    widthIn: wIn,
+    depthIn: dIn,
+    topPanelH: isBoss ? Math.round(h * 0.32) : 0,
+    rx: isBoss ? 5 : 4,
+  };
+  state.widthIn = wIn;
+  state.depthIn = dIn;
+  document.getElementById('encW').value = w;
+  document.getElementById('encH').value = h;
+  document.getElementById('infoWidthIn').value = wIn;
+  document.getElementById('infoDepthIn').value = dIn;
+  buildEnclosureGrid();
+  if (state.elements.length === 0) addDefaultElements(state.enclosure);
+  redraw();
+  showToast(`Custom ${wIn}" × ${dIn}" enclosure (${w}×${h}px)`);
+}
+
+/* ═══════════════════════════════════════════
+   ADD ELEMENT
+═══════════════════════════════════════════ */
+function addEl(props) {
+  const id = nextId++;
+  state.elements.push({ id, ...props });
+  return id;
+}
+
+function addElement(type) {
+  pushUndo();
+  const enc = state.enclosure;
+  const cx = enc.w / 2, cy = enc.h / 2;
+  const defaults = {
+    knob_davies:     {x: cx, y: cy, size: 12, color: '#1a1a1a', indicatorColor: '#fff', label: 'KNOB'},
+    knob_chickenhead:{x: cx, y: cy, size: 13, color: '#1a1a1a', indicatorColor: '#fff', label: 'KNOB'},
+    knob_tophat:     {x: cx, y: cy, size: 11, color: '#222',    indicatorColor: '#fff', label: 'KNOB'},
+    knob_mini:       {x: cx, y: cy, size: 8,  color: '#222',    indicatorColor: '#fff', label: 'KNOB'},
+    switch_3pdt:     {x: cx, y: cy, label: ''},
+    switch_soft:     {x: cx, y: cy, label: ''},
+    switch_boss:      {x: cx, y: cy, w: 28, h: 18, color: '#1a1a1a', label: ''},
+    switch_boss_waza: {x: cx, y: cy, w: 28, h: 18, color: '#1a1a1a', label: ''},
+    toggle_mini:     {x: cx, y: cy, label: ''},
+    led:             {x: cx, y: cy, color: '#ff4444'},
+    screen:          {x: cx, y: 22, w: enc.w-16, h: 20, color: '#000', textColor: '#88ccff', text: 'REVERB'},
+    label_brand:     {x: cx, y: 10, text: state.brand || 'BRAND', size: 10, color: '#fff', align: 'middle', bold: true,  font: enc.id==='boss_compact'?'space_mono':'sans'},
+    label_knob:      {x: cx, y: cy+20, text: 'LABEL', size: 7, color: 'rgba(255,255,255,0.7)', align: 'middle', bold: false, font: enc.id==='boss_compact'?'space_mono':'sans'},
+    jack:            {x: 8, y: enc.h-10, label: '', color: '#b3b3b3', rotation: 0},
+    custom_svg:      {x: cx, y: cy, w: 40, h: 40, svgContent: ''},
+  };
+  const d = defaults[type] || {x: cx, y: cy};
+  const id = addEl({type, ...d});
+  state.selectedId = id;
+  renderElList();
+  redraw();
+  showInspector(id);
+}
+
+/* ═══════════════════════════════════════════
+   ELEMENT LIST (left panel)
+═══════════════════════════════════════════ */
+function renderElList() {
+  const list = document.getElementById('elList');
+  const typeLabel = {
+    knob_davies:'Knob · Davies', knob_chickenhead:'Knob · Chkn Head',
+    knob_tophat:'Knob · Top Hat', knob_mini:'Knob · Mini',
+    switch_3pdt:'Switch · Stomp', switch_soft:'Switch · Soft',
+    switch_boss:'Switch · Boss', switch_boss_waza:'Switch · Boss WAZA', toggle_mini:'Toggle · SPDT', led:'LED',
+    screen:'Screen', label_brand:'Label · Brand',
+    label_knob:'Label · Knob', jack:'Jack', custom_svg:'Custom SVG',
+  };
+  list.innerHTML = state.elements.map(el => `
+    <div class="el-item ${el.id===state.selectedId?'active':''}" onclick="selectEl(${el.id})">
+      <span class="el-drag-handle">⠿</span>
+      <span class="el-item-label">${typeLabel[el.type]||el.type}${el.label?' · '+el.label:el.text?' · '+el.text:''}</span>
+      <button class="el-item-del" onclick="event.stopPropagation();deleteEl(${el.id})">×</button>
+    </div>
+  `).join('');
+}
+
+function selectEl(id) {
+  state.selectedId = id;
+  state.enclosureSelected = false;
+  renderElList();
+  redraw();
+  showInspector(id);
+}
+
+function deleteEl(id) {
+  pushUndo();
+  state.elements = state.elements.filter(e => e.id !== id);
+  if (state.selectedId === id) { state.selectedId = null; hideInspector(); }
+  renderElList();
+  redraw();
+}
+
+/* ═══════════════════════════════════════════
+   INSPECTOR (right panel)
+═══════════════════════════════════════════ */
+function showInspector(id) {
+  const el = state.elements.find(e => e.id === id);
+  if (!el) return hideInspector();
+  const sec = document.getElementById('elementInspector');
+  const body = document.getElementById('inspBody');
+  const title = document.getElementById('inspTitle');
+  sec.style.display = 'block';
+  title.textContent = el.type.replace(/_/g,' ').toUpperCase();
+
+  let html = '';
+  // position always
+  html += row('X', `<input class="insp-input" type="number" step="1" value="${Math.round(el.x)}" onchange="updateEl(${id},'x',+this.value)"/>`);
+  html += row('Y', `<input class="insp-input" type="number" step="1" value="${Math.round(el.y)}" onchange="updateEl(${id},'y',+this.value)"/>`);
+
+  if (el.type.startsWith('knob')) {
+    html += row('Size', `<input class="insp-input" type="number" step="1" min="4" max="30" value="${el.size||12}" onchange="updateEl(${id},'size',+this.value)"/>`);
+    html += row('Color', `<input class="insp-color" type="color" value="${toHex(el.color,'#1a1a1a')}" onchange="updateEl(${id},'color',this.value)"/>`);
+    html += row('Indicator', `<input class="insp-color" type="color" value="${toHex(el.indicatorColor,'#ffffff')}" onchange="updateEl(${id},'indicatorColor',this.value)"/>`);
+    html += row('Label', `<input class="insp-input" style="width:100%;" value="${el.label||''}" oninput="updateEl(${id},'label',this.value)"/>`);
+    html += `<div class="insp-row" style="margin-top:6px;"><span class="insp-label">Angle (°)</span><input class="insp-input" type="number" step="5" value="${el.angle||225}" onchange="updateEl(${id},'angle',+this.value)"/></div>`;
+  }
+  if (el.type === 'led') {
+    html += row('Color', `<input class="insp-color" type="color" value="${toHex(el.color,'#ff4444')}" onchange="updateEl(${id},'color',this.value)"/>`);
+    html += row('Size', `<input class="insp-input" type="number" step="1" min="2" max="8" value="${el.size||4}" onchange="updateEl(${id},'size',+this.value)"/>`);
+  }
+  if (el.type === 'screen') {
+    html += row('Width', `<input class="insp-input" type="number" step="1" value="${el.w||60}" onchange="updateEl(${id},'w',+this.value)"/>`);
+    html += row('Height', `<input class="insp-input" type="number" step="1" value="${el.h||18}" onchange="updateEl(${id},'h',+this.value)"/>`);
+    html += row('Bg', `<input class="insp-color" type="color" value="${toHex(el.color,'#000')}" onchange="updateEl(${id},'color',this.value)"/>`);
+    html += row('Text color', `<input class="insp-color" type="color" value="${toHex(el.textColor,'#88ccff')}" onchange="updateEl(${id},'textColor',this.value)"/>`);
+    html += `<div class="insp-label" style="margin-top:6px;">Text</div><input class="insp-input insp-input-full" value="${el.text||''}" oninput="updateEl(${id},'text',this.value)"/>`;
+  }
+  if (el.type.startsWith('label')) {
+    html += `<div class="insp-label" style="margin-top:4px;">Text</div><input class="insp-input insp-input-full" value="${el.text||''}" oninput="updateEl(${id},'text',this.value)"/>`;
+    html += row('Size', `<input class="insp-input" type="number" step="0.5" min="5" max="24" value="${el.size||9}" onchange="updateEl(${id},'size',+this.value)"/>`);
+    html += row('Color', `<input class="insp-color" type="color" value="${toHex(el.color,'#ffffff')}" onchange="updateEl(${id},'color',this.value)"/>`);
+    html += `<div class="insp-row" style="margin-top:6px;"><span class="insp-label">Font</span>
+      <select class="insp-select" style="width:auto;" onchange="updateEl(${id},'font',this.value)">
+        ${FONT_OPTIONS.map(f=>`<option value="${f.v}" ${(el.font||'sans')===f.v?'selected':''}>${f.l}</option>`).join('')}
+      </select></div>`;
+    html += `<div class="insp-row" style="margin-top:6px;"><span class="insp-label">Align</span>
+      <select class="insp-select" style="width:auto;" onchange="updateEl(${id},'align',this.value)">
+        <option ${el.align==='start'?'selected':''} value="start">Left</option>
+        <option ${el.align==='middle'||!el.align?'selected':''} value="middle">Center</option>
+        <option ${el.align==='end'?'selected':''} value="end">Right</option>
+      </select></div>`;
+    html += `<div class="insp-row"><span class="insp-label">Bold</span>
+      <input type="checkbox" ${el.bold?'checked':''} onchange="updateEl(${id},'bold',this.checked)"/></div>`;
+  }
+  if (el.type === 'jack') {
+    html += row('Label', `<input class="insp-input" style="width:100%;" value="${el.label||''}" oninput="updateEl(${id},'label',this.value)"/>`);
+    html += row('Color', `<input class="insp-color" type="color" value="${toHex(el.color,'#b3b3b3')}" onchange="updateEl(${id},'color',this.value)"/>`);
+    html += `<div class="insp-row" style="margin-top:6px;">
+      <span class="insp-label">Rotation</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="insp-val">${el.rotation||0}°</span>
+        <button class="btn btn-ghost" style="padding:4px 10px;font-size:9px;" onclick="rotateEl(${id})">↻ +90°</button>
+      </div>
+    </div>`;
+  }
+  if (el.type === 'switch_3pdt' || el.type === 'switch_soft') {
+    html += row('Label', `<input class="insp-input" style="width:100%;" value="${el.label||''}" oninput="updateEl(${id},'label',this.value)"/>`);
+  }
+  if (el.type === 'switch_boss' || el.type === 'switch_boss_waza') {
+    html += row('Width',  `<input class="insp-input" type="number" step="1" min="12" max="60" value="${el.w||28}" onchange="updateEl(${id},'w',+this.value)"/>`);
+    html += row('Height', `<input class="insp-input" type="number" step="1" min="8"  max="40" value="${el.h||18}" onchange="updateEl(${id},'h',+this.value)"/>`);
+    html += row('Color',  `<input class="insp-color" type="color" value="${toHex(el.color,'#1a1a1a')}" onchange="updateEl(${id},'color',this.value)"/>`);
+    html += row('Label',  `<input class="insp-input" style="width:100%;" value="${el.label||''}" oninput="updateEl(${id},'label',this.value)"/>`);
+  }
+  if (el.type === 'custom_svg') {
+    html += row('Width',  `<input class="insp-input" type="number" step="1" value="${el.w||40}" onchange="updateEl(${id},'w',+this.value)"/>`);
+    html += row('Height', `<input class="insp-input" type="number" step="1" value="${el.h||40}" onchange="updateEl(${id},'h',+this.value)"/>`);
+    html += `<label class="btn btn-ghost" style="width:100%;font-size:9px;margin-top:8px;display:block;text-align:center;cursor:pointer;">↑ Replace SVG<input type="file" accept=".svg,image/svg+xml" style="display:none" onchange="replaceElementSVGFromFile(${id},this)"/></label>`;
+  }
+
+  // ── Export element as SVG (all types) ──
+  html += `<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);">
+    <button class="btn btn-ghost" style="width:100%;font-size:9px;" onclick="downloadElementSVG(${id})">↓ Export Element SVG</button>
+  </div>`;
+
+  body.innerHTML = html;
+}
+
+function row(label, control) {
+  return `<div class="insp-row"><span class="insp-label">${label}</span>${control}</div>`;
+}
+function toHex(val, fallback) {
+  if (!val) return fallback;
+  if (val.startsWith('#') && (val.length === 7 || val.length === 4)) return val;
+  if (val.startsWith('rgba') || val.startsWith('rgb')) {
+    // convert rgb to hex approximately
+    return fallback;
+  }
+  return fallback;
+}
+function hideInspector() {
+  document.getElementById('elementInspector').style.display = 'none';
+}
+function updateEl(id, key, val) {
+  const el = state.elements.find(e => e.id === id);
+  if (!el) return;
+  pushUndo();
+  el[key] = val;
+  renderElList();
+  redraw();
+}
+
+function rotateEl(id) {
+  const el = state.elements.find(e => e.id === id);
+  if (!el) return;
+  pushUndo();
+  el.rotation = ((el.rotation || 0) + 90) % 360;
+  redraw();
+  showInspector(id);
+}
+function updatePedalInfo() {
+  state.brand   = document.getElementById('infoBrand').value;
+  state.model   = document.getElementById('infoModel').value;
+  state.widthIn = parseFloat(document.getElementById('infoWidthIn').value) || 2.36;
+  state.depthIn = parseFloat(document.getElementById('infoDepthIn').value) || 4.75;
+  updateOutput();
+}
+
+/* ═══════════════════════════════════════════
+   SVG DRAWING ENGINE
+═══════════════════════════════════════════ */
+function redraw() {
+  const enc = state.enclosure;
+  const c   = state.bodyColor;
+  const dk  = darken(c, 0.25);
+  const dkk = darken(c, 0.45);
+  const lite = lighten(c, 0.18);
+
+  let inner = '';
+
+  // ── Static SVG mode (imported from file) ──
+  if (state.staticSVG) {
+    inner = state.staticSVG;
+    inner += `<rect x="2" y="2" width="${enc.w-4}" height="18" rx="0" fill="rgba(0,0,0,0.55)"/>`;
+    inner += `<text x="${enc.w/2}" y="13" text-anchor="middle" font-family="sans-serif" font-size="7" fill="#d4832a" letter-spacing="1">IMPORTED SVG</text>`;
+    inner += `<text x="${enc.w-4}" y="13" text-anchor="end" font-family="sans-serif" font-size="6.5" fill="rgba(255,255,255,0.5)" cursor="pointer" onclick="clearStaticSVG()">✕ CLEAR</text>`;
+    const svgStr2 = `<svg xmlns="http://www.w3.org/2000/svg" width="${enc.w}" height="${enc.h}" viewBox="0 0 ${enc.w} ${enc.h}">${inner}</svg>`;
+    const DS2 = Math.min(3.5, Math.min(480/enc.w, 540/enc.h));
+    const dw2 = Math.round(enc.w*DS2), dh2 = Math.round(enc.h*DS2);
+    const dispSvg2 = `<svg xmlns="http://www.w3.org/2000/svg" width="${dw2}" height="${dh2}" viewBox="0 0 ${enc.w} ${enc.h}">${inner}</svg>`;
+    document.getElementById('pedalCanvas').innerHTML = dispSvg2;
+    updateOutput();
+    return;
+  }
+
+  // ── Body ──
+  if (enc.id === 'boss_compact') {
+    const rx = enc.rx !== undefined ? enc.rx : 5;
+    inner += `<rect x="0" y="0" width="${enc.w}" height="${enc.h}" rx="${rx}" fill="${c}" stroke="${dkk}" stroke-width="1.5"/>`;
+    inner += `<rect x="0" y="0" width="${enc.w}" height="${enc.topPanelH||38}" rx="${rx}" fill="${darken(c,0.18)}" stroke="${dkk}" stroke-width="0"/>`;
+    inner += `<line x1="0" y1="${enc.topPanelH||38}" x2="${enc.w}" y2="${enc.topPanelH||38}" stroke="${dkk}" stroke-width="0.8"/>`;
+    inner += `<rect x="4" y="4" width="${enc.w-8}" height="12" rx="2" fill="${darken(c,0.35)}" opacity="0.6"/>`;
+  } else {
+    const rx = enc.rx !== undefined ? enc.rx : 4;
+    inner += `<rect x="0" y="0" width="${enc.w}" height="${enc.h}" rx="${rx}" fill="${c}" stroke="${dkk}" stroke-width="1.5"/>`;
+    inner += `<line x1="4" y1="1" x2="${enc.w-4}" y2="1" stroke="${lite}" stroke-width="0.8" opacity="0.4"/>`;
+  }
+
+  // ── Elements ──
+  for (const el of state.elements) {
+    inner += drawElement(el, enc);
+  }
+
+  // ── Selection ring ──
+  const selEl = state.elements.find(e => e.id === state.selectedId);
+  if (selEl) {
+    const ring = selectionRing(selEl);
+    if (ring) inner += ring;
+  }
+  // enclosure selection outline
+  if (state.enclosureSelected && !selEl) {
+    inner += `<rect x="1" y="1" width="${enc.w-2}" height="${enc.h-2}" rx="${enc.rx||4}" fill="none" stroke="#d4832a" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.9"/>`;
+  }
+
+  const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" width="${enc.w}" height="${enc.h}" viewBox="0 0 ${enc.w} ${enc.h}">${inner}</svg>`;
+
+  // scale up for display (3x)
+  const DISPLAY_SCALE = Math.min(3.5, Math.min(480 / enc.w, 540 / enc.h));
+  const dw = Math.round(enc.w * DISPLAY_SCALE);
+  const dh = Math.round(enc.h * DISPLAY_SCALE);
+  const displaySvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${dw}" height="${dh}" viewBox="0 0 ${enc.w} ${enc.h}">${inner}</svg>`;
+
+  const canvas = document.getElementById('pedalCanvas');
+  canvas.innerHTML = displaySvg;
+
+  // wire up drag on the displayed SVG
+  const svgEl = canvas.querySelector('svg');
+  svgEl.style.cursor = 'default';
+  svgEl.addEventListener('mousedown', onCanvasMouseDown);
+
+  updateOutput();
+}
+
+function drawElement(el, enc) {
+  const {type, x, y} = el;
+
+  if (type === 'knob_davies') return drawKnobDavies(el);
+  if (type === 'knob_chickenhead') return drawKnobChickenHead(el);
+  if (type === 'knob_tophat') return drawKnobTopHat(el);
+  if (type === 'knob_mini') return drawKnobMini(el);
+  if (type === 'switch_3pdt') return drawStomp3PDT(el);
+  if (type === 'switch_soft') return drawSwitchSoft(el);
+  if (type === 'switch_boss') return drawSwitchBoss(el);
+  if (type === 'switch_boss_waza') return drawSwitchBossWaza(el);
+  if (type === 'toggle_mini') return drawToggleMini(el);
+  if (type === 'led') return drawLED(el);
+  if (type === 'screen') return drawScreen(el);
+  if (type === 'label_brand' || type === 'label_knob') return drawLabel(el);
+  if (type === 'jack') return drawJack(el);
+  if (type === 'custom_svg') return drawCustomSVG(el);
+  return '';
+}
+
+/* ── Knob: Davies 1510 style — skirted, flat top with indicator ── */
+function drawKnobDavies(el) {
+  const {x,y,size:r=12,color='#1a1a1a',indicatorColor='#fff',angle=225} = el;
+  const s = r, sk = r * 1.3; // skirt radius
+  const rad = (angle - 90) * Math.PI / 180;
+  const ix = x + Math.cos(rad) * r * 0.55;
+  const iy = y + Math.sin(rad) * r * 0.55;
+  return `<circle cx="${x}" cy="${y}" r="${sk}" fill="${darken(color,0.1)}" stroke="${darken(color,0.5)}" stroke-width="0.8"/>
+    <circle cx="${x}" cy="${y}" r="${s}" fill="${color}" stroke="${darken(color,0.4)}" stroke-width="0.8"/>
+    <circle cx="${x}" cy="${y}" r="${s*0.35}" fill="${darken(color,0.3)}"/>
+    <line x1="${x}" y1="${y}" x2="${ix}" y2="${iy}" stroke="${indicatorColor}" stroke-width="1.2" stroke-linecap="round"/>`;
+}
+
+/* ── Knob: Chicken Head — pointer-style ── */
+function drawKnobChickenHead(el) {
+  const {x,y,size:r=13,color='#1a1a1a',indicatorColor='#fff',angle=225} = el;
+  const rad = (angle - 90) * Math.PI / 180;
+  const px = x + Math.cos(rad) * r * 1.1;
+  const py = y + Math.sin(rad) * r * 1.1;
+  return `<circle cx="${x}" cy="${y}" r="${r}" fill="${color}" stroke="${darken(color,0.4)}" stroke-width="0.8"/>
+    <circle cx="${x}" cy="${y}" r="${r*0.3}" fill="${darken(color,0.35)}"/>
+    <line x1="${x}" y1="${y}" x2="${px}" y2="${py}" stroke="${indicatorColor}" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="${px}" cy="${py}" r="2.2" fill="${indicatorColor}"/>`;
+}
+
+/* ── Knob: Top Hat (Marshall style) ── */
+function drawKnobTopHat(el) {
+  const {x,y,size:r=11,color='#222',indicatorColor='#fff',angle=225} = el;
+  const rad = (angle - 90) * Math.PI / 180;
+  const ix = x + Math.cos(rad) * r * 0.6;
+  const iy = y + Math.sin(rad) * r * 0.6;
+  return `<circle cx="${x}" cy="${y}" r="${r*1.15}" fill="${darken(color,0.05)}" stroke="${darken(color,0.45)}" stroke-width="0.8"/>
+    <circle cx="${x}" cy="${y}" r="${r*0.72}" fill="${color}" stroke="${darken(color,0.35)}" stroke-width="0.8"/>
+    <line x1="${x}" y1="${y}" x2="${ix}" y2="${iy}" stroke="${indicatorColor}" stroke-width="1.5" stroke-linecap="round"/>
+    <circle cx="${ix}" cy="${iy}" r="1.5" fill="${indicatorColor}"/>`;
+}
+
+/* ── Knob: Mini (Boss-style small) ── */
+function drawKnobMini(el) {
+  const {x,y,size:r=8,color='#222',indicatorColor='#fff',angle=225} = el;
+  const rad = (angle - 90) * Math.PI / 180;
+  const ix = x + Math.cos(rad) * r * 0.65;
+  const iy = y + Math.sin(rad) * r * 0.65;
+  return `<circle cx="${x}" cy="${y}" r="${r}" fill="${color}" stroke="${darken(color,0.4)}" stroke-width="0.8"/>
+    <line x1="${x}" y1="${y}" x2="${ix}" y2="${iy}" stroke="${indicatorColor}" stroke-width="1" stroke-linecap="round"/>`;
+}
+
+/* ── Stomp switch (3PDT) — from traced SVG, 18.58×18.58 canvas ── */
+function drawStomp3PDT(el) {
+  const {x,y} = el;
+  // Outer nut ring, outer cap, inner raised cap
+  return `<circle cx="${x}" cy="${y}" r="9.8"  fill="#555" stroke="#333" stroke-width="0.8"/>
+    <circle cx="${x}" cy="${y}" r="8.89" fill="#999999" stroke="#3a3a3a" stroke-width="0.8"/>
+    <circle cx="${x}" cy="${y}" r="6.46" fill="#cccccc" stroke="#2a2a2a" stroke-width="0.65"/>`;
+}
+
+/* ── Soft-touch footswitch (Strymon style) ── */
+function drawSwitchSoft(el) {
+  const {x,y} = el;
+  return `<circle cx="${x}" cy="${y}" r="11" fill="#141414" stroke="#3a3a3a" stroke-width="1"/>
+    <circle cx="${x}" cy="${y}" r="8"  fill="#1e1e1e" stroke="#2a2a2a" stroke-width="0.8"/>
+    <circle cx="${x}" cy="${y}" r="4"  fill="#111"/>`;
+}
+
+/* ── Boss rubber stomp — traced SVG (60×41 canvas) ── */
+function drawSwitchBoss(el) {
+  const {x, y, w=28, h=18, color='#1a1a1a'} = el;
+  // Scale from native 60×41 to desired w×h, centered on (x,y)
+  const sx = w / 60, sy = h / 41;
+  const dk = darken(color, 0.25);
+  const lite = lighten(color, 0.15);
+  return `<g transform="translate(${x - w/2},${y - h/2}) scale(${sx.toFixed(4)},${sy.toFixed(4)})">
+    <rect x="0.5" y="0.5" width="59" height="40" rx="0" fill="${color}" stroke="${dk}" stroke-width="1"/>
+    <rect x="2.5" y="2.5" width="55" height="36" rx="0" fill="${lite}" opacity="0.12"/>
+    <ellipse cx="30" cy="19.5" rx="16.52" ry="8.8" fill="${lite}" opacity="0.12"/>
+  </g>`;
+}
+
+/* ── Boss WAZA rubber stomp — same 60×41 canvas + WAZA CRAFT badge ── */
+function drawSwitchBossWaza(el) {
+  const {x, y, w=28, h=18, color='#1a1a1a'} = el;
+  const sx = w / 60, sy = h / 41;
+  const dk = darken(color, 0.25);
+  const lite = lighten(color, 0.15);
+  const wazaImg = 'data:image/png;base64,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';
+  return `<g transform="translate(${x - w/2},${y - h/2}) scale(${sx.toFixed(4)},${sy.toFixed(4)})">
+    <rect x="0.5" y="0.5" width="59" height="40" rx="0" fill="${color}" stroke="${dk}" stroke-width="1"/>
+    <rect x="2.5" y="2.5" width="55" height="36" rx="0" fill="${lite}" opacity="0.12"/>
+    <ellipse cx="30" cy="19.5" rx="16.52" ry="8.8" fill="${lite}" opacity="0.10"/>
+    <image href="${wazaImg}" x="9.03" y="17.00" width="43.35" height="12.75" preserveAspectRatio="none"/>
+  </g>`;
+}
+
+
+/* ── Mini toggle switch ── */
+function drawToggleMini(el) {
+  const {x,y} = el;
+  return `<rect x="${x-3}" y="${y-8}" width="6" height="16" rx="3" fill="#888" stroke="#555" stroke-width="0.8"/>
+    <rect x="${x-2}" y="${y-4}" width="4" height="8" rx="2" fill="#ccc"/>`;
+}
+
+/* ── LED ── */
+function drawLED(el) {
+  const {x,y,color='#ff4444',size=4} = el;
+  return `<circle cx="${x}" cy="${y}" r="${size}" fill="${color}" opacity="0.9"/>
+    <circle cx="${x}" cy="${y}" r="${size*0.55}" fill="${lighten(color,0.35)}" opacity="0.7"/>`;
+}
+
+/* ── Screen ── */
+function drawScreen(el) {
+  const {x,y,w=60,h=18,color='#000',textColor='#88ccff',text='SCREEN'} = el;
+  return `<rect x="${x-w/2}" y="${y-h/2}" width="${w}" height="${h}" rx="2" fill="${color}" stroke="#1a2a3a" stroke-width="0.8"/>
+    <text x="${x}" y="${y+h*0.28}" text-anchor="middle" font-family="monospace" font-size="${h*0.45}" fill="${textColor}">${text}</text>`;
+}
+
+/* ── Font map for labels ── */
+const FONT_MAP = {
+  'sans':       'sans-serif',
+  'serif':      'serif',
+  'mono':       "'Space Mono', monospace",
+  'bebas':      "'Bebas Neue', sans-serif",
+  'space_mono': "'Space Mono', monospace",
+  'dm_sans':    "'DM Sans', sans-serif",
+};
+const FONT_OPTIONS = [
+  {v:'sans',      l:'Sans-serif'},
+  {v:'serif',     l:'Serif'},
+  {v:'mono',      l:'Monospace'},
+  {v:'space_mono',l:'Space Mono'},
+  {v:'bebas',     l:'Bebas Neue'},
+  {v:'dm_sans',   l:'DM Sans'},
+];
+
+/* ── Label ── */
+function drawLabel(el) {
+  const {x,y,text='LABEL',size=9,color='#fff',align='middle',bold=false,font='sans'} = el;
+  const weight = bold ? 'bold' : 'normal';
+  const ff = FONT_MAP[font] || 'sans-serif';
+  return `<text x="${x}" y="${y}" text-anchor="${align}" font-family="${ff}" font-size="${size}" font-weight="${weight}" fill="${color}" letter-spacing="0.5">${escXML(text)}</text>`;
+}
+
+/* ── Jack (input/output) — traced SVG: 12.9×2.2 rounded rect barrel ── */
+function drawJack(el) {
+  const {x, y, color='#b3b3b3', rotation=0} = el;
+  const w=12.907, h=2.2007, rx=3.213;
+  const dk = darken(color, 0.3);
+  return `<g transform="rotate(${rotation},${x},${y})">
+    <rect x="${x-w/2}" y="${y-h/2}" width="${w}" height="${h}" rx="${rx}" ry="${rx}" fill="${color}" stroke="${dk}" stroke-width="0.5"/>
+  </g>`;
+}
+
+/* ── Custom SVG element ── */
+function drawCustomSVG(el) {
+  const {x, y, w=40, h=40, svgContent=''} = el;
+  return `<g transform="translate(${x - w/2},${y - h/2})">${svgContent}</g>`;
+}
+
+/* ── Selection ring ── */
+function selectionRing(el) {
+  const {type,x,y} = el;
+  const pad = 5;
+  if (type.startsWith('knob')) {
+    const r = (el.size||12) * 1.35 + pad;
+    return `<circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="${'#d4832a'}" stroke-width="1" stroke-dasharray="3 2" opacity="0.8"/>`;
+  }
+  if (type === 'switch_3pdt') return `<circle cx="${x}" cy="${y}" r="${9.8+pad}" fill="none" stroke="#d4832a" stroke-width="1" stroke-dasharray="3 2" opacity="0.8"/>`;
+  if (type === 'switch_soft') return `<circle cx="${x}" cy="${y}" r="${11+pad}" fill="none" stroke="#d4832a" stroke-width="1" stroke-dasharray="3 2" opacity="0.8"/>`;
+  if (type === 'switch_boss' || type === 'switch_boss_waza') {
+    const {w=28,h=18} = el;
+    return `<rect x="${x-w/2-pad}" y="${y-h/2-pad}" width="${w+pad*2}" height="${h+pad*2}" rx="${(h/2)+pad}" fill="none" stroke="#d4832a" stroke-width="1" stroke-dasharray="3 2" opacity="0.8"/>`;
+  }
+  if (type === 'led') return `<circle cx="${x}" cy="${y}" r="${(el.size||4)+pad}" fill="none" stroke="#d4832a" stroke-width="1" stroke-dasharray="3 2" opacity="0.8"/>`;
+  if (type === 'screen') {
+    const {w=60,h=18} = el;
+    return `<rect x="${x-w/2-pad}" y="${y-h/2-pad}" width="${w+pad*2}" height="${h+pad*2}" rx="4" fill="none" stroke="#d4832a" stroke-width="1" stroke-dasharray="3 2" opacity="0.8"/>`;
+  }
+  if (type === 'jack') return `<circle cx="${x}" cy="${y}" r="${12.907/2+pad}" fill="none" stroke="#d4832a" stroke-width="1" stroke-dasharray="3 2" opacity="0.8"/>`;
+  if (type === 'toggle_mini') return `<rect x="${x-8}" y="${y-13}" width="16" height="26" rx="4" fill="none" stroke="#d4832a" stroke-width="1" stroke-dasharray="3 2" opacity="0.8"/>`;
+  if (type.startsWith('label')) return `<rect x="${x-30}" y="${y-10}" width="60" height="14" rx="2" fill="none" stroke="#d4832a" stroke-width="1" stroke-dasharray="3 2" opacity="0.8"/>`;
+  if (type === 'custom_svg') { const {w=40,h=40}=el; return `<rect x="${x-w/2-pad}" y="${y-h/2-pad}" width="${w+pad*2}" height="${h+pad*2}" rx="2" fill="none" stroke="#d4832a" stroke-width="1" stroke-dasharray="3 2" opacity="0.8"/>`; }
+  return '';
+}
+
+/* ═══════════════════════════════════════════
+   KEYBOARD SHORTCUTS
+═══════════════════════════════════════════ */
+document.addEventListener('keydown', e => {
+  // Delete or Backspace removes selected element
+  // but not if focus is inside a text input/textarea
+  const tag = document.activeElement?.tagName?.toLowerCase();
+  if (tag === 'input' || tag === 'textarea') return;
+
+  if (e.key === 'z' && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    undo();
+    return;
+  }
+  if (e.key === 'c' && (e.ctrlKey || e.metaKey) && state.selectedId !== null) {
+    const el = state.elements.find(x => x.id === state.selectedId);
+    if (el) { clipboard = JSON.parse(JSON.stringify(el)); showToast('Element copied'); }
+    return;
+  }
+  if (e.key === 'v' && (e.ctrlKey || e.metaKey) && clipboard !== null) {
+    e.preventDefault();
+    pushUndo();
+    const {id: _, ...rest} = clipboard;
+    const newId = addEl({ ...rest, x: clipboard.x + 10, y: clipboard.y + 10 });
+    state.selectedId = newId;
+    renderElList();
+    redraw();
+    showInspector(newId);
+    return;
+  }
+  if ((e.key === 'Delete' || e.key === 'Backspace') && state.selectedId !== null) {
+    e.preventDefault();
+    deleteEl(state.selectedId);
+  }
+  // Escape deselects
+  if (e.key === 'Escape') {
+    state.selectedId = null;
+    state.enclosureSelected = false;
+    renderElList();
+    redraw();
+    hideInspector();
+  }
+  // Arrow keys nudge selected element 1px (shift = 10px)
+  if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key) && state.selectedId !== null) {
+    e.preventDefault();
+    const el = state.elements.find(x => x.id === state.selectedId);
+    if (!el) return;
+    pushUndo();
+    const step = e.shiftKey ? 10 : 1;
+    if (e.key === 'ArrowLeft')  el.x -= step;
+    if (e.key === 'ArrowRight') el.x += step;
+    if (e.key === 'ArrowUp')    el.y -= step;
+    if (e.key === 'ArrowDown')  el.y += step;
+    el.x = Math.round(el.x);
+    el.y = Math.round(el.y);
+    redraw();
+    showInspector(el.id);
+  }
+});
+
+/* ═══════════════════════════════════════════
+   CANVAS DRAG
+═══════════════════════════════════════════ */
+function onCanvasMouseDown(e) {
+  e.preventDefault();
+  const canvas = document.getElementById('pedalCanvas');
+  const svgEl  = canvas.querySelector('svg');
+  const rect   = svgEl.getBoundingClientRect();
+  const enc    = state.enclosure;
+  const DISPLAY_SCALE = Math.min(3.5, Math.min(480/enc.w, 540/enc.h));
+
+  // convert screen coords to SVG coords
+  const svgX = (e.clientX - rect.left) / DISPLAY_SCALE;
+  const svgY = (e.clientY - rect.top)  / DISPLAY_SCALE;
+
+  // find closest element within hit radius
+  let hit = null, bestDist = 20;
+  for (const el of [...state.elements].reverse()) {
+    const dx = el.x - svgX, dy = el.y - svgY;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist < bestDist) { bestDist = dist; hit = el; }
+  }
+
+  if (hit) {
+    state.selectedId = hit.id;
+    state.enclosureSelected = false;
+    pushUndo();
+    dragState = { id: hit.id, startMouseX: e.clientX, startMouseY: e.clientY, origX: hit.x, origY: hit.y, scale: DISPLAY_SCALE };
+    renderElList();
+    redraw();
+    showInspector(hit.id);
+  } else {
+    // clicked the body — select the enclosure itself
+    state.selectedId = null;
+    state.enclosureSelected = true;
+    dragState = null;
+    renderElList();
+    redraw();
+    showEnclosureInspector();
+  }
+}
+
+function showEnclosureInspector() {
+  const enc = state.enclosure;
+  const sec = document.getElementById('elementInspector');
+  const body = document.getElementById('inspBody');
+  document.getElementById('inspTitle').textContent = 'ENCLOSURE';
+  sec.style.display = 'block';
+  body.innerHTML = `
+    ${row('Width (px)', `<input class="insp-input" type="number" step="1" min="40" max="300" id="liveEncW" value="${enc.w}" oninput="liveUpdateEnc('w',+this.value)"/>`)}
+    ${row('Height (px)', `<input class="insp-input" type="number" step="1" min="40" max="300" id="liveEncH" value="${enc.h}" oninput="liveUpdateEnc('h',+this.value)"/>`)}
+    ${row('Corner radius', `<input class="insp-input" type="number" step="1" min="0" max="40" id="liveEncRx" value="${enc.rx !== undefined ? enc.rx : 4}" oninput="liveUpdateEnc('rx',+this.value)"/>`)}
+    ${enc.topPanelH !== undefined ? row('Top panel H', `<input class="insp-input" type="number" step="1" min="0" max="${enc.h}" id="liveEncTP" value="${enc.topPanelH||0}" oninput="liveUpdateEnc('topPanelH',+this.value)"/>`) : ''}
+    <div style="margin-top:10px;">
+      <div class="insp-label" style="margin-bottom:6px;color:var(--amber);">Real-world Size</div>
+      ${row('Width (in)', `<input class="insp-input" type="number" step="0.01" value="${state.widthIn}" oninput="liveUpdateEncReal('widthIn',+this.value)"/>`)}
+      ${row('Depth (in)', `<input class="insp-input" type="number" step="0.01" value="${state.depthIn}" oninput="liveUpdateEncReal('depthIn',+this.value)"/>`)}
+    </div>
+  `;
+  document.getElementById('encW').value = enc.w;
+  document.getElementById('encH').value = enc.h;
+}
+
+function liveUpdateEnc(key, val) {
+  pushUndo();
+  state.enclosure = { ...state.enclosure, [key]: val };
+  // keep top-level fields in sync
+  if (key === 'w') document.getElementById('encW').value = val;
+  if (key === 'h') document.getElementById('encH').value = val;
+  redraw();
+}
+
+function liveUpdateEncReal(key, val) {
+  state[key] = val;
+  if (key === 'widthIn') document.getElementById('infoWidthIn').value = val;
+  if (key === 'depthIn') document.getElementById('infoDepthIn').value = val;
+  updateOutput();
+}
+
+document.addEventListener('mousemove', e => {
+  if (!dragState) return;
+  const el = state.elements.find(x => x.id === dragState.id);
+  if (!el) return;
+  const dx = (e.clientX - dragState.startMouseX) / dragState.scale;
+  const dy = (e.clientY - dragState.startMouseY) / dragState.scale;
+  el.x = Math.round(dragState.origX + dx);
+  el.y = Math.round(dragState.origY + dy);
+  redraw();
+  showInspector(el.id);
+});
+
+document.addEventListener('mouseup', () => { dragState = null; });
+
+/* ═══════════════════════════════════════════
+   OUTPUT
+═══════════════════════════════════════════ */
+function generateSVGInner() {
+  if (state.staticSVG) return state.staticSVG;
+  const enc = state.enclosure;
+  const c   = state.bodyColor;
+  const dk  = darken(c, 0.25);
+  const dkk = darken(c, 0.45);
+  const lite = lighten(c, 0.18);
+
+  let inner = '';
+  if (enc.id === 'boss_compact') {
+    const rx = enc.rx !== undefined ? enc.rx : 5;
+    inner += `<rect x="0" y="0" width="${enc.w}" height="${enc.h}" rx="${rx}" fill="${c}" stroke="${dkk}" stroke-width="1.5"/>`;
+    inner += `<rect x="0" y="0" width="${enc.w}" height="${enc.topPanelH||38}" rx="${rx}" fill="${darken(c,0.18)}" stroke="${dkk}" stroke-width="0"/>`;
+    inner += `<line x1="0" y1="${enc.topPanelH||38}" x2="${enc.w}" y2="${enc.topPanelH||38}" stroke="${dkk}" stroke-width="0.8"/>`;
+    inner += `<rect x="4" y="4" width="${enc.w-8}" height="12" rx="2" fill="${darken(c,0.35)}" opacity="0.6"/>`;
+  } else {
+    const rx = enc.rx !== undefined ? enc.rx : 4;
+    inner += `<rect x="0" y="0" width="${enc.w}" height="${enc.h}" rx="${rx}" fill="${c}" stroke="${dkk}" stroke-width="1.5"/>`;
+    inner += `<line x1="4" y1="1" x2="${enc.w-4}" y2="1" stroke="${lite}" stroke-width="0.8" opacity="0.4"/>`;
+  }
+  for (const el of state.elements) inner += drawElement(el, enc);
+  return inner;
+}
+
+function clearStaticSVG() {
+  pushUndo();
+  state.staticSVG = null;
+  redraw();
+}
+
+function updateOutput() {
+  const enc = state.enclosure;
+  const inner = generateSVGInner();
+  const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" width="${enc.w}" height="${enc.h}" viewBox="0 0 ${enc.w} ${enc.h}">\n  ${inner}\n</svg>`;
+  document.getElementById('outputBox').textContent = svgStr;
+}
+
+function generatePedalEntry() {
+  const enc = state.enclosure;
+  const inner = generateSVGInner();
+  const brand = state.brand || 'Brand';
+  const model = state.model || 'Model';
+  const id    = (brand+model).toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+  return `  {
+    id: '${id}',
+    brand: '${brand}',
+    name: '${model}',
+    w: ${enc.w}, h: ${enc.h},
+    widthIn: ${state.widthIn},
+    depthIn: ${state.depthIn},
+    svg: \`${inner.replace(/`/g,"'")}\`
+  },`;
+}
+
+function copyOutput() {
+  const enc = state.enclosure;
+  const inner = generateSVGInner();
+  const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" width="${enc.w}" height="${enc.h}" viewBox="0 0 ${enc.w} ${enc.h}">${inner}</svg>`;
+  navigator.clipboard.writeText(svgStr).then(()=>showToast('SVG copied!'));
+}
+
+function copyPedalEntry() {
+  navigator.clipboard.writeText(generatePedalEntry()).then(()=>showToast('PEDALS entry copied!'));
+}
+
+/* ── Download full pedal as SVG file ── */
+function downloadSVG() {
+  const enc = state.enclosure;
+  const inner = generateSVGInner();
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${enc.w}" height="${enc.h}" viewBox="0 0 ${enc.w} ${enc.h}">\n${inner}\n</svg>`;
+  const fname = `${(state.brand||'pedal').replace(/\s+/g,'_')}_${(state.model||'pedal').replace(/\s+/g,'_')}.svg`;
+  triggerDownload(svg, fname, 'image/svg+xml');
+}
+
+/* ── Upload SVG as the full pedal design ── */
+function uploadPedalSVG(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const {inner, w, h} = parseSVGFile(e.target.result);
+    pushUndo();
+    state.staticSVG = inner;
+    state.enclosure = { ...state.enclosure, w, h };
+    state.elements  = [];
+    state.selectedId = null;
+    document.getElementById('encW').value = w;
+    document.getElementById('encH').value = h;
+    renderElList();
+    redraw();
+    hideInspector();
+    showToast('SVG imported — click CLEAR on canvas to re-edit');
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
+
+/* ── Add an uploaded SVG as a Custom SVG element ── */
+function addCustomSVGElement(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const {inner, w, h} = parseSVGFile(e.target.result);
+    pushUndo();
+    const enc = state.enclosure;
+    const id = addEl({ type:'custom_svg', x: Math.round(enc.w/2), y: Math.round(enc.h/2), w, h, svgContent: inner });
+    state.selectedId = id;
+    renderElList(); redraw(); showInspector(id);
+    showToast('Custom SVG element added');
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
+
+/* ── Replace a custom_svg element's content from a file ── */
+function replaceElementSVGFromFile(id, input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const {inner, w, h} = parseSVGFile(e.target.result);
+    const el = state.elements.find(x => x.id === id);
+    if (!el) return;
+    pushUndo();
+    el.svgContent = inner; el.w = w; el.h = h;
+    redraw(); showInspector(id);
+    showToast('SVG replaced');
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
+
+/* ── Export a single element as a standalone SVG file ── */
+function downloadElementSVG(id) {
+  const el = state.elements.find(e => e.id === id);
+  if (!el) return;
+  const pad = 10;
+  // calculate a tight bounding box for the element type
+  let bw, bh;
+  if      (el.type.startsWith('knob'))    { const r=(el.size||12)*1.35+5+pad; bw=bh=Math.round(r*2); }
+  else if (el.type==='switch_3pdt')       { bw=bh=(14+5+pad)*2; }
+  else if (el.type==='switch_soft')       { bw=bh=(11+5+pad)*2; }
+  else if (el.type==='switch_boss' || el.type==='switch_boss_waza') { bw=(el.w||28)+pad*2; bh=(el.h||18)+pad*2; }
+  else if (el.type==='toggle_mini')       { bw=16+pad*2; bh=26+pad*2; }
+  else if (el.type==='led')               { bw=bh=((el.size||4)+5+pad)*2; }
+  else if (el.type==='screen')            { bw=(el.w||60)+pad*2; bh=(el.h||18)+pad*2; }
+  else if (el.type.startsWith('label'))   { bw=80+pad*2; bh=(el.size||9)+pad*2+4; }
+  else if (el.type==='jack')              { bw=bh=(5+5+pad)*2; }
+  else if (el.type==='custom_svg')        { bw=(el.w||40)+pad*2; bh=(el.h||40)+pad*2; }
+  else                                    { bw=bh=60; }
+
+  const cx = bw/2, cy = bh/2;
+  const inner = drawElement({...el, x:cx, y:cy}, state.enclosure);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${bw}" height="${bh}" viewBox="0 0 ${bw} ${bh}">${inner}</svg>`;
+  const fname = `${el.type}${el.label?'_'+el.label:el.text?'_'+el.text:''}.svg`;
+  triggerDownload(svg, fname, 'image/svg+xml');
+}
+
+/* ── Parse an SVG file string, return inner content + dimensions ── */
+function parseSVGFile(svgText) {
+  const doc = (new DOMParser()).parseFromString(svgText, 'image/svg+xml');
+  const svgEl = doc.querySelector('svg');
+  let w = parseFloat(svgEl?.getAttribute('width'))  || state.enclosure.w;
+  let h = parseFloat(svgEl?.getAttribute('height')) || state.enclosure.h;
+  const vb = svgEl?.getAttribute('viewBox');
+  if (vb) { const p=vb.trim().split(/[\s,]+/); if(p.length===4){w=parseFloat(p[2])||w; h=parseFloat(p[3])||h;} }
+  const inner = svgEl ? Array.from(svgEl.childNodes).map(n=>n.outerHTML||'').join('') : svgText;
+  return { inner, w: Math.round(w), h: Math.round(h) };
+}
+
+/* ── Shared download helper ── */
+function triggerDownload(content, filename, mime) {
+  const blob = new Blob([content], {type: mime});
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement('a'), {href:url, download:filename});
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function saveToLibrary() {
+  const enc = state.enclosure;
+  const brand = (state.brand || 'Brand').trim();
+  const model = (state.model || 'Model').trim();
+  const id = (brand + '_' + model).toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+  const entry = {
+    id,
+    brand,
+    name: model,
+    w: enc.w,
+    h: enc.h,
+    widthIn: state.widthIn,
+    depthIn: state.depthIn,
+    svg: generateSVGInner(),
+  };
+  // Post to parent app if embedded as iframe
+  if (window.parent !== window) {
+    window.parent.postMessage({ type: 'sc_save_pedal', pedal: entry }, '*');
+    showToast(`"${brand} ${model}" saved to library`);
+    return;
+  }
+  // Fallback: localStorage (same-origin only)
+  try {
+    const stored = localStorage.getItem('sc_custom_pedals');
+    const customs = stored ? JSON.parse(stored) : [];
+    const existing = customs.findIndex(p => p.id === id);
+    if (existing !== -1) customs[existing] = entry;
+    else customs.push(entry);
+    localStorage.setItem('sc_custom_pedals', JSON.stringify(customs));
+    showToast(`"${brand} ${model}" saved to library`);
+  } catch(e) {
+    showToast('Save failed');
+  }
+}
+
+/* ═══════════════════════════════════════════
+   PRESETS
+═══════════════════════════════════════════ */
+function loadPreset() {
+  const presets = [
+    {
+      label: 'Boss OC-5 (Green)',
+      fn: () => {
+        selectEnclosure(ENCLOSURES.find(e=>e.id==='boss_compact'));
+        setBodyColor('#1a6e3a');
+        state.brand='Boss'; state.model='OC-5';
+        document.getElementById('infoBrand').value='Boss';
+        document.getElementById('infoModel').value='OC-5';
+        state.elements = [];
+        addEl({type:'label_brand',x:35,y:16,text:'BOSS',size:9,color:'#fff',align:'middle',bold:true,font:'space_mono'});
+        addEl({type:'knob_mini',x:18,y:52,size:9,color:'#0e4a28',indicatorColor:'#fff',angle:225,label:'OCT 2'});
+        addEl({type:'knob_mini',x:35,y:52,size:9,color:'#0e4a28',indicatorColor:'#fff',angle:225,label:'OCT 1'});
+        addEl({type:'knob_mini',x:52,y:52,size:9,color:'#0e4a28',indicatorColor:'#fff',angle:225,label:'DIRECT'});
+        addEl({type:'label_knob',x:18,y:66,text:'OCT 2',size:5.5,color:'rgba(255,255,255,0.7)',align:'middle'});
+        addEl({type:'label_knob',x:35,y:66,text:'OCT 1',size:5.5,color:'rgba(255,255,255,0.7)',align:'middle'});
+        addEl({type:'label_knob',x:52,y:66,text:'DIRECT',size:5.5,color:'rgba(255,255,255,0.7)',align:'middle'});
+        addEl({type:'led',x:52,y:24,color:'#ff4444',size:3});
+        addEl({type:'switch_boss',x:35,y:96,w:36,h:22,color:'#1a1a1a',label:''});
+        addEl({type:'jack',x:8,y:112,label:'',color:'#888'});
+        addEl({type:'jack',x:62,y:112,label:'',color:'#888'});
+      }
+    },
+    {
+      label: 'Strymon BigSky (Blue)',
+      fn: () => {
+        selectEnclosure(ENCLOSURES.find(e=>e.id==='strymon_large'));
+        setBodyColor('#4a90c8');
+        state.brand='Strymon'; state.model='BigSky';
+        document.getElementById('infoBrand').value='Strymon';
+        document.getElementById('infoModel').value='BigSky';
+        state.elements = [];
+        addEl({type:'screen',x:56,y:18,w:78,h:20,color:'#000',textColor:'#88ccff',text:'SPRING  3.4s'});
+        addEl({type:'knob_davies',x:18,y:52,size:9,color:'#2a6a9a',indicatorColor:'#fff',angle:225,label:'DECAY'});
+        addEl({type:'knob_davies',x:41,y:52,size:9,color:'#2a6a9a',indicatorColor:'#fff',angle:225,label:'PRE'});
+        addEl({type:'knob_davies',x:64,y:52,size:9,color:'#2a6a9a',indicatorColor:'#fff',angle:270,label:'MIX'});
+        addEl({type:'knob_davies',x:87,y:52,size:9,color:'#2a6a9a',indicatorColor:'#fff',angle:270,label:'TONE'});
+        addEl({type:'label_knob',x:18,y:65,text:'DECAY',size:5,color:'rgba(170,220,255,0.8)',align:'middle'});
+        addEl({type:'label_knob',x:41,y:65,text:'PRE',size:5,color:'rgba(170,220,255,0.8)',align:'middle'});
+        addEl({type:'label_knob',x:64,y:65,text:'MIX',size:5,color:'rgba(170,220,255,0.8)',align:'middle'});
+        addEl({type:'label_knob',x:87,y:65,text:'TONE',size:5,color:'rgba(170,220,255,0.8)',align:'middle'});
+        addEl({type:'switch_soft',x:28,y:88,label:''});
+        addEl({type:'switch_soft',x:84,y:88,label:''});
+        addEl({type:'label_brand',x:56,y:78,text:'BIG SKY',size:7,color:'rgba(106,186,238,0.9)',align:'middle',bold:true});
+        addEl({type:'jack',x:8,y:96,label:'',color:'#888'});
+        addEl({type:'jack',x:104,y:96,label:'Out',color:'#888'});
+      }
+    },
+    {
+      label: 'Ibanez TS9 (Green)',
+      fn: () => {
+        selectEnclosure(ENCLOSURES.find(e=>e.id==='1590b'));
+        setBodyColor('#3a6e1a');
+        state.brand='Ibanez'; state.model='TS9';
+        document.getElementById('infoBrand').value='Ibanez';
+        document.getElementById('infoModel').value='TS9';
+        state.elements = [];
+        addEl({type:'label_brand',x:32,y:12,text:'TUBE SCREAMER',size:6,color:'#aaee88',align:'middle',bold:false});
+        addEl({type:'label_knob',x:32,y:22,text:'TS9',size:7,color:'#88cc66',align:'middle',bold:false});
+        addEl({type:'knob_davies',x:15,y:46,size:10,color:'#1e4a0e',indicatorColor:'#fff',angle:225,label:'DRIVE'});
+        addEl({type:'knob_davies',x:32,y:46,size:10,color:'#1e4a0e',indicatorColor:'#fff',angle:225,label:'TONE'});
+        addEl({type:'knob_davies',x:49,y:46,size:10,color:'#1e4a0e',indicatorColor:'#fff',angle:270,label:'LEVEL'});
+        addEl({type:'label_knob',x:15,y:60,text:'DRIVE',size:5.5,color:'#88cc66',align:'middle'});
+        addEl({type:'label_knob',x:32,y:60,text:'TONE',size:5.5,color:'#88cc66',align:'middle'});
+        addEl({type:'label_knob',x:49,y:60,text:'LEVEL',size:5.5,color:'#88cc66',align:'middle'});
+        addEl({type:'led',x:52,y:24,color:'#ff4444',size:3});
+        addEl({type:'switch_3pdt',x:32,y:88,label:''});
+        addEl({type:'jack',x:8,y:100,label:'',color:'#888'});
+        addEl({type:'jack',x:56,y:100,label:'',color:'#888'});
+      }
+    },
+  ];
+
+  // simple preset picker
+  const name = prompt('Load preset:\n' + presets.map((p,i)=>`${i+1}. ${p.label}`).join('\n') + '\n\nEnter number:');
+  const idx = parseInt(name) - 1;
+  if (idx >= 0 && idx < presets.length) {
+    presets[idx].fn();
+    renderElList();
+    redraw();
+  }
+}
+
+function resetEditor() {
+  state.elements = [];
+  state.selectedId = null;
+  state.brand = ''; state.model = '';
+  document.getElementById('infoBrand').value = '';
+  document.getElementById('infoModel').value = '';
+  addDefaultElements(state.enclosure);
+  renderElList();
+  redraw();
+  hideInspector();
+}
+
+/* ═══════════════════════════════════════════
+   UTILS
+═══════════════════════════════════════════ */
+function darken(hex, a) {
+  if (!hex || hex === 'none') return hex;
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return '#' + [r,g,b].map(v => Math.max(0,Math.round(v*(1-a))).toString(16).padStart(2,'0')).join('');
+}
+function lighten(hex, a) {
+  if (!hex || hex === 'none') return hex;
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return '#' + [r,g,b].map(v => Math.min(255,Math.round(v+(255-v)*a)).toString(16).padStart(2,'0')).join('');
+}
+function escXML(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function showToast(msg) {
+  let t = document.getElementById('_toast');
+  if (!t) { t = document.createElement('div'); t.id='_toast'; t.style.cssText='position:fixed;bottom:24px;right:24px;background:#d4832a;color:#0e0d0b;padding:10px 20px;font-family:Space Mono,monospace;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;z-index:9999;transition:all .3s;border-radius:2px;'; document.body.appendChild(t); }
+  t.textContent = msg; t.style.opacity='1'; t.style.transform='translateY(0)';
+  setTimeout(()=>{ t.style.opacity='0'; t.style.transform='translateY(10px)'; }, 2000);
+}
+
+/* ── INIT ── */
+init();
+</script>
+</body>
+</html>
