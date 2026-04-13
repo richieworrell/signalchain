@@ -1526,8 +1526,11 @@ async function signIn() {
 async function signOut() {
   await sb.auth.signOut();
   currentUser = null;
-  customPedals = [];
+  PEDALS.length = 0;
   renderAuthArea();
+  renderSignalChainPedals();
+  // Library is universal — keep showing it, just re-render to clear any user state
+  renderLibrary();
   showToast('Signed out');
 }
 
@@ -1636,14 +1639,13 @@ async function saveCustomPedalToCloud(p) {
 }
 
 async function loadPedalLibrary() {
-  console.log('Loading pedal library from Supabase...');
-  const { data, error, status, statusText } = await sb.from('pedals')
+  const { data, error } = await sb.from('pedals')
     .select('*')
     .order('brand', { ascending: true })
     .order('name',  { ascending: true });
-  console.log('Library fetch — status:', status, statusText, '| rows:', data?.length, '| error:', error);
   if (error) { console.error('Failed to load pedal library:', error); return; }
   pedalLibrary = data || [];
+  renderLibrary(); // always render immediately after loading
 }
 
 
@@ -2019,10 +2021,9 @@ renderAuthArea();
 document.body.classList.add('signal-labels-visible');
 setView('layout');
 
-// Boot: load pedal library (no auth needed), then check session for rig
+// Boot: load pedal library first (no auth needed), then check session for rig
 (async () => {
-  await loadPedalLibrary();
-  renderLibrary();
+  await loadPedalLibrary(); // renders library internally when done
 
   const { data: { session } } = await sb.auth.getSession();
   if (session?.user) {
@@ -2037,11 +2038,16 @@ sb.auth.onAuthStateChange(async (event, session) => {
   if (event === 'SIGNED_IN' && session?.user) {
     await onUserSignedIn(session.user);
   } else if (event === 'SIGNED_OUT') {
-    currentUser = null;
-    PEDALS.length = 0;
-    renderAuthArea();
-    renderSignalChainPedals();
-    renderLibrary();
+    // Only handle SIGNED_OUT if it wasn't triggered by our own signOut() button
+    // (signOut() already handles cleanup itself)
+    if (currentUser !== null) {
+      currentUser = null;
+      PEDALS.length = 0;
+      renderAuthArea();
+      renderSignalChainPedals();
+      // Library is universal — re-fetch to ensure it's populated
+      await loadPedalLibrary();
+    }
   }
 });
 </script>
