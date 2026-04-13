@@ -1536,9 +1536,8 @@ async function signOut() {
 async function onUserSignedIn(user) {
   currentUser = user;
   renderAuthArea();
-  await Promise.all([loadRigFromCloud(), loadCustomPedalsFromCloud()]);
+  await loadRigFromCloud(); // rig is per-user; library already loaded at boot
   renderSignalChainPedals();
-  renderLibrary(LIBRARY);
 }
 
 /* ══════════════════════════════════════════════════════
@@ -1604,20 +1603,11 @@ async function loadRigFromCloud() {
 ══════════════════════════════════════════════════════ */
 async function saveCustomPedalToCloud(p) {
   if (!currentUser) {
-    // Not signed in — save to localStorage only
-    try {
-      const stored  = localStorage.getItem('sc_custom_pedals');
-      const customs = stored ? JSON.parse(stored) : [];
-      const ci      = customs.findIndex(x => x.id === p.id);
-      if (ci !== -1) customs[ci] = p; else customs.push(p);
-      localStorage.setItem('sc_custom_pedals', JSON.stringify(customs));
-    } catch(e) {}
-    showToast(`"${p.brand} ${p.name}" saved locally — sign in to sync across devices`);
+    showToast('Sign in to save pedals to the library');
     return;
   }
 
   const { error } = await sb.from('custom_pedals').upsert({
-    user_id:    currentUser.id,
     pedal_id:   p.id,
     brand:      p.brand,
     name:       p.name,
@@ -1625,7 +1615,7 @@ async function saveCustomPedalToCloud(p) {
     w:          p.w,
     h:          p.h,
     updated_at: new Date().toISOString(),
-  }, { onConflict: 'user_id, pedal_id' });
+  }, { onConflict: 'pedal_id' });
 
   if (error) {
     console.error('Custom pedal save failed', error);
@@ -1637,15 +1627,8 @@ async function saveCustomPedalToCloud(p) {
 }
 
 async function loadCustomPedalsFromCloud() {
-  if (!currentUser) {
-    try {
-      const stored = localStorage.getItem('sc_custom_pedals');
-      if (stored) customPedals = JSON.parse(stored);
-    } catch(e) {}
-    return;
-  }
-
-  const { data, error } = await sb.from('custom_pedals').select('*').eq('user_id', currentUser.id);
+  // Library is universal — load for everyone, signed in or not
+  const { data, error } = await sb.from('custom_pedals').select('*').order('brand');
   if (error || !data) return;
   customPedals = data.map(row => ({
     id:    row.pedal_id,
@@ -2050,17 +2033,18 @@ renderAuthArea();
 document.body.classList.add('signal-labels-visible');
 setView('layout');
 
-// Boot Supabase auth — check for existing session, then listen for changes
+// Boot: always load the shared pedal library first (no auth required)
+// Then check for an existing session and load the user's rig if signed in
 (async () => {
+  await loadCustomPedalsFromCloud(); // universal library — load for everyone
+  renderLibrary(LIBRARY);
+
   const { data: { session } } = await sb.auth.getSession();
   if (session?.user) {
     await onUserSignedIn(session.user);
   } else {
-    // No session — load from localStorage as fallback, render
-    await loadRigFromCloud();
-    await loadCustomPedalsFromCloud();
+    await loadRigFromCloud(); // falls back to localStorage when not signed in
     renderSignalChainPedals();
-    renderLibrary(LIBRARY);
   }
 })();
 
@@ -2070,9 +2054,8 @@ sb.auth.onAuthStateChange(async (event, session) => {
     await onUserSignedIn(session.user);
   } else if (event === 'SIGNED_OUT') {
     currentUser = null;
-    customPedals = [];
     renderAuthArea();
-    renderLibrary(LIBRARY);
+    renderLibrary(LIBRARY); // library stays — it's universal
   }
 });
 </script>
