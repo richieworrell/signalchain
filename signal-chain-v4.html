@@ -1565,11 +1565,16 @@ async function saveRig() {
   }
 
   console.log('Saving rig for user', currentUser.id, '— pedals:', PEDALS.length, 'layout keys:', Object.keys(layoutPedalPositions).length);
+  const boardW = parseFloat(document.getElementById('boardW').value) || 24;
+  const boardD = parseFloat(document.getElementById('boardD').value) || 12;
+
   const { data, error } = await sb.from('rigs').upsert({
     user_id:     currentUser.id,
     pedals:      PEDALS,
     connections: connections,
     layout:      layoutPedalPositions,
+    board_w:     boardW,
+    board_d:     boardD,
     updated_at:  new Date().toISOString(),
   }, { onConflict: 'user_id' }).select();
 
@@ -1606,6 +1611,11 @@ async function loadRigFromCloud() {
   }
   if (data.layout)      layoutPedalPositions = data.layout;
   if (data.connections) connections = data.connections;
+  if (data.board_w) {
+    document.getElementById('boardW').value = data.board_w;
+    document.getElementById('boardD').value = data.board_d || 12;
+    resizeLayoutBoard();
+  }
 }
 
 /* ══════════════════════════════════════════════════════
